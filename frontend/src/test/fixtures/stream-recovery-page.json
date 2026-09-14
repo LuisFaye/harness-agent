@@ -1,0 +1,42 @@
+{
+  "run_id": "ask-fixture-recovery",
+  "events": [
+    {
+      "version": "2.0",
+      "run_id": "ask-fixture-recovery",
+      "sequence": 4,
+      "type": "response_delta",
+      "timestamp": "2026-07-28T10:40:01+08:00",
+      "payload": {
+        "delta": "恢复后"
+      }
+    },
+    {
+      "version": "2.0",
+      "run_id": "ask-fixture-recovery",
+      "sequence": 5,
+      "type": "response_completed",
+      "timestamp": "2026-07-28T10:40:01.100000+08:00",
+      "payload": {
+        "text": "断流前恢复后"
+      }
+    },
+    {
+      "version": "2.0",
+      "run_id": "ask-fixture-recovery",
+      "sequence": 6,
+      "type": "run_completed",
+      "timestamp": "2026-07-28T10:40:01.200000+08:00",
+      "payload": {
+        "status": "success",
+        "result": {
+          "run_id": "ask-fixture-recovery",
+          "status": "success",
+          "response_text": "断流前恢复后"
+        }
+      }
+    }
+  ],
+  "last_sequence": 6,
+  "has_more": false
+}

@@ -1,0 +1,71 @@
+{
+  "id": "official-document",
+  "tool_name": "official_document",
+  "description": "按党政机关公文格式生成红头 Word（.docx）：红头、发文字号、标题、主送、正文层级、落款。用户要红头文件、正式通知、公告、决定、请示、批复时必须调用本工具，不要用手写 Markdown 或临时 python-docx 脚本冒充版式。生成文件写入 outputs/，对话页会出预览和下载卡片。发文机关未知时先追问再调用。",
+  "tools": ["official_document"],
+  "triggers": [
+    "/official-document",
+    "/hongtou",
+    "红头文件",
+    "红头公文",
+    "正式公文",
+    "发文",
+    "通知公告"
+  ],
+  "intent_examples": [
+    "帮我写一份国庆节放假通知红头文件",
+    "生成公司正式通知 Word",
+    "按公文格式出一份关于值班安排的通知"
+  ],
+  "interaction_mode": "react_tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string",
+        "title": "标题",
+        "description": "公文标题，例如「关于2026年国庆节放假安排的通知」。不要带书名号。"
+      },
+      "body": {
+        "type": "string",
+        "title": "正文",
+        "description": "公文正文纯文本，按空行分段。以「一、」「二、」开头的短行会排成黑体一级标题；「（一）」等条款仍用仿宋正文。不要使用 Markdown。"
+      },
+      "red_header": {
+        "type": "string",
+        "title": "红头",
+        "description": "文件版头，例如「××公司文件」「办公室文件」。用户没说发文机关时不要编造，先追问。"
+      },
+      "doc_number": {
+        "type": "string",
+        "title": "发文字号",
+        "description": "例如「××办〔2026〕12号」。没有则留空，不要编造文号。"
+      },
+      "recipients": {
+        "type": "string",
+        "title": "主送机关",
+        "description": "例如「各部门、各项目部」。可省略冒号，工具会补上。"
+      },
+      "issuer": {
+        "type": "string",
+        "title": "落款单位",
+        "description": "成文机关名称。不传时从红头去掉「文件」二字得到。"
+      },
+      "issue_date": {
+        "type": "string",
+        "title": "成文日期",
+        "description": "例如 2026-09-10 或 2026年9月10日。不传则用当天。"
+      },
+      "filename": {
+        "type": "string",
+        "title": "文件名",
+        "description": "输出文件名，不要带路径。默认用标题.docx。"
+      }
+    },
+    "required": ["title", "body", "red_header"]
+  },
+  "execution": {
+    "type": "python_callable",
+    "entrypoint": "daily_agent.skill_handlers.official_document:run"
+  }
+}

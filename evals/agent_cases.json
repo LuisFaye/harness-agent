@@ -1,0 +1,51 @@
+[
+  {
+    "id": "ordinary-question-no-tool",
+    "type": "route",
+    "query": "你好，请简单介绍一下你自己",
+    "expected_skill": null
+  },
+  {
+    "id": "daily-report-route",
+    "type": "route",
+    "query": "帮我生成今天的工作日报",
+    "expected_skill": "daily-report"
+  },
+  {
+    "id": "project-inspector-route",
+    "type": "route",
+    "query": "检查当前项目结构和主要入口",
+    "expected_skill": "project-inspector"
+  },
+  {
+    "id": "daily-report-missing-repository",
+    "type": "missing_fields",
+    "query": "帮我生成日报",
+    "skill": "daily-report",
+    "expected_missing": ["repos"]
+  },
+  {
+    "id": "missing-model-key",
+    "type": "model_health",
+    "api_key": "",
+    "expected_status": "error"
+  },
+  {
+    "id": "skill-tool-runtime-failure",
+    "type": "tool_failure",
+    "skill": "project-inspector",
+    "expected_exception": "RuntimeError"
+  },
+  {
+    "id": "disabled-skill-tool-hidden",
+    "type": "disabled_skill",
+    "skill": "project-inspector",
+    "expected_tool_count": 0
+  },
+  {
+    "id": "disconnected-mcp-tool-unavailable",
+    "type": "mcp_visibility",
+    "connected": false,
+    "expected_available": false
+  }
+]

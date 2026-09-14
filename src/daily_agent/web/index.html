@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SB Agent 工作台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/assets/styles.css?v=49">
+</head>
+<body>
+  <a class="skip-link" href="#workspace-main">跳到主要内容</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="工作台导航">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SB</div>
+        <div>
+          <strong>SB Agent</strong>
+          <span id="sidebar-health-label">本地服务 · 检查中</span>
+        </div>
+        <button type="button" class="icon-button mobile-sidebar-toggle" id="mobile-sidebar-toggle"
+                aria-label="展开全局设置" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+
+      <nav class="main-nav" aria-label="主要功能">
+        <button type="button" class="nav-item view-switch active" data-view="chat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+          <span>Agent</span>
+        </button>
+        <button type="button" class="nav-item view-switch" data-view="runs">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l3-3 3 2 5-7"/></svg>
+          <span>运行监控</span>
+        </button>
+        <button type="button" class="nav-item view-switch" data-view="schedule">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2z"/></svg>
+          <span>自动任务</span>
+        </button>
+        <button type="button" class="nav-item view-switch" data-view="capabilities">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+          <span>能力中心</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-spacer" aria-hidden="true"></div>
+
+      <details class="sidebar-settings">
+        <summary aria-label="打开工作台设置">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>
+          <span>设置</span>
+        </summary>
+        <div class="sidebar-settings-popover">
+          <button type="button" class="sidebar-tool" id="open-skills-modal">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 2.3 4.7L19.5 8l-3.8 3.7.9 5.3-4.6-2.5L7.4 17l.9-5.3L4.5 8l5.2-1.3z"/></svg>
+            <span><strong>技能设置</strong><small id="skills-sidebar-summary">正在读取</small></span>
+          </button>
+          <button type="button" class="sidebar-tool" id="open-model-config">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 8h14M7 16h10"/></svg>
+            <span><strong>模型配置</strong><small id="sidebar-model-label">模型未知</small></span>
+          </button>
+        </div>
+      </details>
+
+      <div class="sidebar-footer">
+        <div>
+          <strong id="sidebar-user-label">default</strong>
+          <span>当前用户</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="workspace" id="workspace-main" tabindex="-1">
+      <section class="view active" id="view-chat">
+        <div class="agent-workbench-layout">
+          <aside class="agent-session-panel" aria-label="Agent 会话">
+            <div class="agent-session-head">
+              <div>
+                <p class="eyebrow visible-eyebrow">Agent</p>
+                <h2>会话</h2>
+                <p>只管理聊天记录，不展示运行 Trace。</p>
+              </div>
+              <div class="agent-session-actions">
+                <button type="button" class="icon-button session-panel-close"
+                        id="session-panel-close" aria-label="关闭会话列表">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+                <button type="button" class="primary-button compact-button session-new-button" id="new-chat-button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                  <span>新对话</span>
+                </button>
+              </div>
+            </div>
+            <div class="agent-session-body">
+              <label class="agent-session-search" for="session-search">
+                <span>搜索会话</span>
+                <input type="search" id="session-search" placeholder="标题或 Session ID">
+              </label>
+              <div class="agent-session-list-head">
+                <strong>最近会话</strong>
+                <button type="button" class="text-button" id="refresh-sessions">刷新</button>
+              </div>
+              <div class="session-list" id="session-list"></div>
+            </div>
+          </aside>
+
+          <div class="agent-conversation">
+            <header class="topbar conversation-topbar">
+              <div class="conversation-navigation">
+                <button type="button" class="icon-button workspace-menu-toggle" id="workspace-menu-toggle"
+                        aria-label="打开工作台导航" aria-expanded="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <button type="button" class="icon-button mobile-session-toggle"
+                        id="mobile-session-toggle" aria-expanded="false" aria-label="打开会话列表">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h12M4 19h8"/></svg>
+                </button>
+              </div>
+              <div class="conversation-heading">
+                <h1 id="chat-session-title">当前会话</h1>
+                <p id="chat-session-meta">已准备好开始聊天</p>
+              </div>
+              <button type="button" class="icon-button topbar-new-chat" id="topbar-new-chat"
+                      aria-label="新建对话">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </header>
+
+            <div class="chat-layout">
+              <section class="chat-panel">
+                <details class="summary-banner" id="summary-banner" hidden>
+                  <summary>
+                    <strong>会话摘要</strong>
+                    <span>已压缩的历史上下文</span>
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+                  </summary>
+                  <p id="summary-text"></p>
+                </details>
+
+                <div class="starter-panel" id="welcome-strip">
+                  <div>
+                    <h2>从一个明确任务开始</h2>
+                    <p>描述目标即可，Agent 会在需要时调用工具并持续汇报进度。</p>
+                  </div>
+                  <div class="prompt-grid" aria-label="常用任务">
+                    <button type="button" class="prompt-chip" data-prompt="帮我生成今天的日报，仓库就是当前项目">生成今日日报</button>
+                    <button type="button" class="prompt-chip" data-prompt="检查这个项目里最近最容易出问题的地方，给我一个风险清单">项目风险检查</button>
+                    <button type="button" class="prompt-chip" data-prompt="帮我梳理当前项目结构，并给出关键模块关系">梳理项目结构</button>
+                  </div>
+                </div>
+
+                <div class="chat-log" id="chat-log" aria-live="polite"></div>
+                <button type="button" class="jump-to-latest" id="jump-to-latest" hidden>
+                  回到最新
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+
+                <div class="composer-dock">
+                  <form id="chat-form" class="composer">
+                  <label class="sr-only" for="chat-input">输入任务</label>
+                  <input id="attachment-input" type="file" multiple hidden accept=".txt,.md,.csv,.json,.pdf,.docx,.xlsx,.png,.jpg,.jpeg,.webp">
+                  <div class="attachment-tray" id="attachment-tray" hidden></div>
+                  <textarea id="chat-input" name="agent-query" rows="1" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="输入你的任务或问题，Enter 发送，Shift + Enter 换行"></textarea>
+                  <div class="composer-footer">
+                    <div class="composer-status">
+                      <button type="button" class="text-button attach-button" id="attach-file-button">附件</button>
+                      <span id="attachment-status" class="attachment-status" hidden></span>
+                      <span class="status-dot" id="composer-status-dot" aria-hidden="true"></span>
+                      <span id="composer-status-text">随时可以发起一个任务</span>
+                      <span id="composer-runtime" hidden>0s</span>
+                      <span class="draft-chip" id="draft-status" hidden>草稿已保存</span>
+                    </div>
+                    <button type="submit" class="send-button" aria-label="发送">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 9 15"/><path d="m21 3-7 18-4-8-8-4z"/></svg>
+                    </button>
+                  </div>
+                  </form>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-schedule">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">自动任务</p>
+            <h1>任务管理</h1>
+            <p>集中查看任务状态、下次执行时间和历史运行记录。</p>
+          </div>
+          <button type="button" class="ghost-button" id="refresh-schedules">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg>
+            <span>刷新任务</span>
+          </button>
+        </header>
+
+        <section class="schedule-summary" aria-label="任务状态概览">
+          <article class="schedule-summary-item">
+            <span class="schedule-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+            <div><strong id="schedule-total-count">0</strong><span>全部任务</span></div>
+          </article>
+          <article class="schedule-summary-item is-active">
+            <span class="schedule-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48 2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48 2.83-2.83"/></svg></span>
+            <div><strong id="schedule-active-count">0</strong><span>已启用</span></div>
+          </article>
+          <article class="schedule-summary-item is-paused">
+            <span class="schedule-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 9v6m4-6v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></span>
+            <div><strong id="schedule-paused-count">0</strong><span>已暂停</span></div>
+          </article>
+        </section>
+
+        <section class="schedule-list-panel">
+          <div class="schedule-list-header">
+            <div>
+              <h2>已创建任务</h2>
+              <p>任务按更新时间排列，可直接执行或查看历史记录。</p>
+            </div>
+            <span id="schedule-count-label" class="schedule-count-label">0 个任务</span>
+          </div>
+          <div id="schedule-list" class="schedule-task-grid" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section class="view" id="view-runs">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">运行监控</p>
+            <h1>Agent 运行</h1>
+            <p>按 run_id 回看回答、工具调用、Trace 和 Prompt；聊天页只保留最终回答。</p>
+          </div>
+          <button type="button" class="ghost-button" id="refresh-agent-runs">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg>
+            <span>刷新运行</span>
+          </button>
+        </header>
+
+        <div class="run-monitor-layout">
+          <aside class="run-list-panel" aria-label="Agent 运行列表">
+            <form id="run-filter-form" class="run-filter-form">
+              <label>
+                <span>搜索</span>
+                <input id="run-filter-keyword" type="search" placeholder="run_id 或用户输入">
+              </label>
+              <div class="run-filter-row">
+                <label>
+                  <span>状态</span>
+                  <select id="run-filter-status">
+                    <option value="">全部状态</option>
+                    <option value="success">成功</option>
+                    <option value="error">失败</option>
+                    <option value="needs_input">等待补充</option>
+                    <option value="needs_confirmation">等待确认</option>
+                    <option value="max_iterations">达到轮次上限</option>
+                  </select>
+                </label>
+                <label>
+                  <span>会话 ID</span>
+                  <input id="run-filter-session" type="text" placeholder="例如 work">
+                </label>
+              </div>
+              <div class="run-filter-actions">
+                <button type="submit" class="primary-button compact-button">应用筛选</button>
+                <button type="button" class="text-button" id="reset-run-filters">清空</button>
+              </div>
+            </form>
+            <div class="run-list-meta">
+              <strong id="agent-run-count">正在读取运行记录</strong>
+            </div>
+            <div id="agent-run-list" class="agent-run-list" role="listbox" aria-label="Agent 运行"></div>
+            <div class="run-pagination" aria-label="运行列表翻页">
+              <button type="button" class="ghost-button compact-button" id="run-prev-page">上一页</button>
+              <button type="button" class="ghost-button compact-button" id="run-next-page">下一页</button>
+            </div>
+          </aside>
+
+          <section id="agent-run-detail" class="run-detail-panel" aria-live="polite" tabindex="-1">
+            <div class="run-detail-empty">
+              <strong>请选择一次运行</strong>
+              <p>这里会展示回答、计划、Tool、Trace 和 Prompt。</p>
+            </div>
+          </section>
+        </div>
+
+        <details class="automatic-run-panel">
+          <summary>自动任务运行</summary>
+          <div class="automatic-run-content">
+            <div class="panel-title row">
+              <div>
+                <h2>定时任务执行记录</h2>
+                <p>输入任务 ID，继续查看现有 scheduled_job_runs，不与 Agent 运行混成一张表。</p>
+              </div>
+              <div class="run-loader">
+                <label>
+                  <span>任务 ID</span>
+                  <input id="runs-job-id" type="number" min="1" inputmode="numeric" placeholder="例如 1">
+                </label>
+                <button type="button" class="ghost-button" id="load-runs">查看执行</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>运行 ID</th>
+                    <th>状态</th>
+                    <th>开始时间</th>
+                    <th>结束时间</th>
+                    <th>结果摘要</th>
+                  </tr>
+                </thead>
+                <tbody id="runs-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="view" id="view-capabilities">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">能力中心</p>
+            <h1>Tool、Skill 与 MCP</h1>
+            <p>这里只展示真实可执行能力；“已导入”和“Agent 可调用”会分开说明。</p>
+          </div>
+          <button type="button" class="ghost-button" id="refresh-capabilities">刷新能力</button>
+        </header>
+
+        <div class="capability-tabs" role="tablist" aria-label="能力类型">
+          <button type="button" class="capability-tab active" data-capability-tab="tools" role="tab">Tool</button>
+          <button type="button" class="capability-tab" data-capability-tab="skills" role="tab">Skill</button>
+          <button type="button" class="capability-tab" data-capability-tab="mcp" role="tab">MCP</button>
+        </div>
+
+        <section class="capability-panel active" data-capability-panel="tools">
+          <div class="capability-panel-head"><h2>Agent Tools</h2><p>来源停用或 Tool 单独停用后，会立即从模型工具列表移除。</p></div>
+          <div id="capability-tool-list" class="capability-grid"></div>
+        </section>
+
+        <section class="capability-panel" data-capability-panel="skills">
+          <div class="capability-panel-head"><h2>Skills</h2><p>区分导入、启用、可执行、已注册和 Agent 可调用。</p></div>
+          <div id="capability-skill-list" class="capability-grid"></div>
+        </section>
+
+        <section class="capability-panel" data-capability-panel="mcp">
+          <div class="capability-mcp-layout">
+            <form id="mcp-server-form" class="stack-form capability-mcp-form">
+              <h2 id="mcp-form-title">新增 MCP Server</h2>
+              <label><span>名称</span><input id="mcp-name" required maxlength="64" placeholder="例如 本地文件工具"></label>
+              <label><span>连接方式</span><select id="mcp-transport"><option value="stdio">stdio</option><option value="streamable_http">Streamable HTTP</option></select></label>
+              <label><span>启动命令</span><input id="mcp-command" placeholder="例如 /usr/bin/python3"></label>
+              <label><span>命令参数</span><textarea id="mcp-args" rows="3" placeholder="每行一个参数"></textarea></label>
+              <label><span>服务地址</span><input id="mcp-url" placeholder="https://example.com/mcp"></label>
+              <label><span>环境变量键名</span><textarea id="mcp-environment-keys" rows="2" placeholder="每行一个，例如 MCP_TOKEN"></textarea></label>
+              <label><span>请求头环境变量映射</span><textarea id="mcp-header-env-map" rows="2" placeholder="每行 Header=ENV_KEY"></textarea></label>
+              <div class="capability-form-actions">
+                <button type="submit" class="primary-button">保存 MCP</button>
+                <button type="button" class="ghost-button" id="reset-mcp-form">取消编辑</button>
+              </div>
+              <div class="notice">这里只保存环境变量键名，不保存密钥值。</div>
+            </form>
+            <div>
+              <div class="capability-panel-head"><h2>MCP Servers</h2><p>连接成功后同步 Tool、Resource 和 Prompt。</p></div>
+              <div id="capability-mcp-list" class="capability-grid"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="skills-modal" hidden>
+    <section class="modal-card skills-drawer" role="dialog" aria-modal="true" aria-labelledby="skills-modal-title">
+      <div class="modal-header">
+        <div>
+          <h2 id="skills-modal-title">技能管理</h2>
+          <p>查看 Skill 用途、SKILL.md、内部脚本和实际持久化位置。</p>
+        </div>
+        <button type="button" class="icon-button" data-close-modal="skills-modal" aria-label="关闭技能管理">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="skills-manager-toolbar">
+        <label class="search-field" for="skill-search">
+          <span>搜索 skill</span>
+          <input id="skill-search" type="search" placeholder="名称、描述、工具或能力">
+        </label>
+        <div class="skills-manager-count" id="skills-manager-count">0 个 skill</div>
+      </div>
+      <form id="skill-import-form" class="stack-form">
+        <label>
+          <span>skill 路径或 GitHub URL</span>
+          <input id="skill-import-path" type="text" placeholder="/path/to/my-skill 或 https://github.com/owner/repo">
+        </label>
+        <div class="notice">支持本地目录、GitHub 仓库，以及 skills.sh 单个 Skill 地址。推荐粘贴 skills.sh 地址，避免整仓导入。</div>
+        <button type="submit" class="primary-button">导入 skill</button>
+      </form>
+      <div class="skills-modal-list" id="skills-modal-list"></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="model-config-modal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="model-config-title">
+      <div class="modal-header">
+        <div>
+          <h2 id="model-config-title">模型配置</h2>
+          <p>保存后写入本地 config.toml。</p>
+        </div>
+        <button type="button" class="icon-button" data-close-modal="model-config-modal" aria-label="关闭模型配置">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form id="model-config-form" class="stack-form">
+        <div class="notice" id="model-config-meta">正在读取配置...</div>
+        <label>
+          <span>模型 Provider</span>
+          <select id="model-provider">
+            <option value="openai_compatible">OpenAI 兼容（DeepSeek、OpenAI、兼容网关）</option>
+            <option value="dashscope">阿里云 DashScope</option>
+          </select>
+        </label>
+        <label>
+          <span>模型 ID</span>
+          <input id="model-id" type="text" placeholder="deepseek-v4-flash">
+        </label>
+        <label>
+          <span>API Key</span>
+          <input id="model-api-key" type="password" autocomplete="new-password" placeholder="留空表示保留已保存的 Key">
+        </label>
+        <label>
+          <span>Base URL</span>
+          <input id="model-base-url" type="text" placeholder="https://api.deepseek.com">
+        </label>
+        <label>
+          <span>上下文 Token 预算</span>
+          <input id="context-token-budget" type="number" min="1" step="1" placeholder="1000000">
+        </label>
+        <label class="checkbox-field">
+          <input id="model-thinking-enabled" type="checkbox" checked>
+          <span>开启深度思考</span>
+        </label>
+        <label>
+          <span>思考强度</span>
+          <select id="model-reasoning-effort">
+            <option value="high">High（日常复杂任务）</option>
+            <option value="max">Max（最复杂任务，更慢）</option>
+          </select>
+        </label>
+        <label class="checkbox-field">
+          <input id="model-clear-api-key" type="checkbox">
+          <span>明确清空已保存的 API Key</span>
+        </label>
+        <label class="checkbox-field">
+          <input id="agno-telemetry" type="checkbox">
+          <span>允许 Agno 发送运行遥测（默认关闭）</span>
+        </label>
+        <div class="notice" id="model-config-note">环境变量覆盖信息将在这里显示。</div>
+        <div class="notice">当前接口没有登录鉴权，只应绑定 127.0.0.1，不要直接暴露到公网。</div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">保存配置</button>
+          <button type="button" class="ghost-button" id="test-model-connection">测试连接</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop developer-backdrop" id="developer-modal" hidden>
+    <section class="developer-drawer" role="dialog" aria-modal="true" aria-labelledby="developer-modal-title">
+      <div class="modal-header">
+        <div>
+          <h2 id="developer-modal-title">执行详情</h2>
+          <p>集中查看 Prompt、工具调用、执行轨迹和上下文。</p>
+        </div>
+        <button type="button" class="icon-button" data-close-modal="developer-modal" aria-label="关闭执行详情">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="developer-tabs" role="tablist" aria-label="执行详情分类">
+        <button type="button" class="developer-tab active" data-developer-tab="prompt">Prompt</button>
+        <button type="button" class="developer-tab" data-developer-tab="tools">工具调用</button>
+        <button type="button" class="developer-tab" data-developer-tab="trace">执行轨迹</button>
+        <button type="button" class="developer-tab" data-developer-tab="context">上下文</button>
+        <button type="button" class="developer-tab" data-developer-tab="raw">原始 JSON</button>
+      </div>
+
+      <div class="developer-panel active" data-developer-panel="prompt">
+        <div class="developer-panel-head">
+          <div>
+            <h3>最终 Prompt 快照</h3>
+            <p id="prompt-meta">等待本轮请求生成 Prompt。</p>
+          </div>
+          <button type="button" class="ghost-button compact-button" id="copy-prompt-button">复制 Prompt</button>
+        </div>
+        <pre class="prompt-output" id="prompt-output">等待请求</pre>
+      </div>
+
+      <div class="developer-panel" data-developer-panel="tools">
+        <div id="chat-observations" class="run-info-panel">等待请求</div>
+      </div>
+
+      <div class="developer-panel" data-developer-panel="trace">
+        <div id="chat-trace" class="trace-list">
+          <div class="trace-empty">等待请求</div>
+        </div>
+        <div class="developer-panel-head">
+          <div>
+            <h3>执行计划</h3>
+            <p>规划结果和关键步骤。</p>
+          </div>
+        </div>
+        <div id="chat-plan" class="run-info-panel">等待请求</div>
+      </div>
+
+      <div class="developer-panel" data-developer-panel="context">
+        <div class="form-grid">
+          <label>
+            <span>用户 ID</span>
+            <input id="user-id" type="text" value="default">
+          </label>
+          <label>
+            <span>Session</span>
+            <input id="session-id" type="text" value="work">
+          </label>
+        </div>
+        <div class="key-value-list context-grid">
+          <div><span>消息数</span><strong id="context-message-count">0</strong></div>
+          <div><span>摘要状态</span><strong id="context-summary-state">无</strong></div>
+          <div><span>压缩来源</span><strong id="context-compression-source">未知</strong></div>
+          <div><span>压缩消息数</span><strong id="context-compression-count">0</strong></div>
+          <div><span>预算使用</span><strong id="context-budget-usage">未知</strong></div>
+          <div><span>截断状态</span><strong id="context-truncation-state">未知</strong></div>
+        </div>
+      </div>
+
+      <div class="developer-panel" data-developer-panel="raw">
+        <pre class="prompt-output" id="developer-raw-json">等待请求</pre>
+      </div>
+    </section>
+  </div>
+
+  <button type="button" class="workspace-scrim" id="workspace-scrim" aria-label="关闭侧边栏" hidden></button>
+
+  <div class="run-drawer-backdrop" id="run-drawer-backdrop" hidden>
+    <aside class="run-drawer" id="run-drawer" role="dialog" aria-modal="true"
+           aria-labelledby="run-drawer-title" tabindex="-1">
+      <header class="run-drawer-header">
+        <div>
+          <span class="run-drawer-status" id="run-drawer-status">执行过程</span>
+          <h2 id="run-drawer-title">本次运行</h2>
+          <p id="run-drawer-meta">正在读取运行详情</p>
+        </div>
+        <button type="button" class="icon-button" id="run-drawer-close" aria-label="关闭运行详情">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+      <div class="run-drawer-body">
+        <section class="working-state-panel" aria-label="当前任务状态">
+          <div><strong>目标</strong><span id="working-status-goal">未记录</span></div>
+          <div><strong>已完成</strong><span id="working-status-completed">暂无</span></div>
+          <div><strong>证据</strong><span id="working-status-evidence">暂无</span></div>
+          <div><strong>阻塞</strong><span id="working-status-blocker">无</span></div>
+          <div><strong>下一步</strong><span id="working-status-next">等待任务</span></div>
+          <div><strong>上下文</strong><span id="working-status-tokens">尚未产生压缩数据</span></div>
+        </section>
+        <section class="run-drawer-process" id="run-drawer-process" aria-live="polite">
+          <div class="process-loading"><span aria-hidden="true"></span><strong>正在读取执行过程...</strong></div>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="/assets/app.js?v=56" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+.active-run-progress {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 16px;
+  padding: 4px 0 4px 14px;
+  border-left: 2px solid #cfe3de;
+}
+
+.active-thinking {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.active-thinking-logo {
+  position: relative;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #fff;
+  border-radius: 10px;
+  background: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.active-thinking-logo::after {
+  position: absolute;
+  inset: -3px;
+  border: 2px solid transparent;
+  border-top-color: #4da89d;
+  border-right-color: #a7d2ca;
+  border-radius: 12px;
+  content: "";
+  animation: sbThinkingSpin 1.1s linear infinite;
+}
+
+.active-thinking-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.active-thinking-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.active-thinking-copy > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-thinking-count {
+  color: var(--faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.active-step-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.active-step {
+  display: grid;
+  min-height: 34px;
+  grid-template-columns: 12px auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.active-step.is-child {
+  margin-left: 20px;
+}
+
+.active-step-marker {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #c5c9cf;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.active-step.status-running .active-step-marker {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  animation: activeStepPulse 1.2s ease-in-out infinite;
+}
+
+.active-step.status-success .active-step-marker {
+  border-color: #2d8b67;
+  background: #2d8b67;
+}
+
+.active-step.status-error .active-step-marker,
+.active-step.status-blocked .active-step-marker {
+  border-color: var(--red);
+  background: #fef3f2;
+}
+
+.active-step-type {
+  min-width: 42px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-muted);
+  font-size: 10px;
+  font-weight: 650;
+  text-align: center;
+}
+
+.active-step-type.type-skill {
+  color: #175cd3;
+  background: #eff8ff;
+}
+
+.active-step-type.type-mcp {
+  color: #6941c6;
+  background: #f4f3ff;
+}
+
+.active-step-type.type-subagent {
+  color: #b54708;
+  background: #fffaeb;
+}
+
+.active-step-action {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-step-status {
+  color: var(--faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.active-run-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.active-run-actions button {
+  min-height: 44px;
+  padding: 0 10px;
+  color: var(--primary-strong);
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.active-run-actions button:hover {
+  background: var(--surface-tint);
+}
+
+.active-run-actions button.danger {
+  color: var(--red);
+}
+
+.active-run-actions button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@keyframes sbThinkingSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes activeStepPulse {
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+@media (max-width: 767px) {
+  .active-thinking {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .active-thinking-count {
+    display: none;
+  }
+
+  .active-step {
+    grid-template-columns: 12px auto minmax(0, 1fr);
+  }
+
+  .active-step-status {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-thinking-logo::after,
+  .active-step.status-running .active-step-marker {
+    animation: none;
+  }
+}

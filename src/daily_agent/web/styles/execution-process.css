@@ -1,0 +1,464 @@
+.message-process.execution-stream {
+  margin: 4px 0 14px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.message-process.execution-stream > .process-overview-summary {
+  min-height: 44px;
+  padding: 0 2px;
+  background: transparent;
+}
+
+.message-process.execution-stream > .message-process-body {
+  padding: 4px 0 10px;
+}
+
+.process-summary-title {
+  overflow: hidden;
+}
+
+.process-summary-title strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.process-status-icon,
+.execution-step-status {
+  display: grid;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: var(--muted);
+  background: #fff;
+}
+
+.process-status-icon svg,
+.execution-step-status svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.status-success > .process-overview-summary .process-status-icon,
+.execution-node.status-success > .process-timeline-step .execution-step-status {
+  border-color: #059669;
+  color: #fff;
+  background: #059669;
+}
+
+.status-running > .process-overview-summary .process-status-icon,
+.execution-node.status-running > .process-timeline-step .execution-step-status {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: #eff6ff;
+}
+
+.status-error > .process-overview-summary .process-status-icon,
+.status-cancelled > .process-overview-summary .process-status-icon,
+.execution-node.status-error > .process-timeline-step .execution-step-status,
+.execution-node.status-cancelled > .process-timeline-step .execution-step-status {
+  border-color: var(--red);
+  color: #fff;
+  background: var(--red);
+}
+
+.status-needs_input > .process-overview-summary .process-status-icon,
+.status-needs_confirmation > .process-overview-summary .process-status-icon,
+.execution-node.status-needs_input > .process-timeline-step .execution-step-status,
+.execution-node.status-needs_confirmation > .process-timeline-step .execution-step-status,
+.execution-node.status-blocked > .process-timeline-step .execution-step-status {
+  border-color: var(--amber);
+  color: #fff;
+  background: var(--amber);
+}
+
+.status-spinner {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  color: inherit;
+  background: currentColor;
+  animation: activityPulse 1200ms ease-in-out infinite;
+}
+
+.status-pending-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #cbd5e1;
+}
+
+.execution-tree,
+.execution-children {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.execution-tree {
+  padding-left: 2px;
+}
+
+.execution-node {
+  position: relative;
+}
+
+.execution-node:not(:last-child)::before {
+  position: absolute;
+  top: 31px;
+  bottom: -13px;
+  left: 8px;
+  width: 1px;
+  background: #dbe3ee;
+  content: "";
+}
+
+.process-timeline-step {
+  position: relative;
+}
+
+.process-timeline-step > summary {
+  list-style: none;
+}
+
+.process-timeline-step > summary::-webkit-details-marker {
+  display: none;
+}
+
+.message-process .execution-step-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto minmax(0, auto) 16px;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.message-process .execution-step-row:hover,
+.message-process .execution-step-row:focus-visible {
+  color: var(--blue);
+}
+
+.execution-step-action {
+  overflow: hidden;
+  color: currentColor;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.execution-node.status-pending .execution-step-action {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.capability-badge {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 999px;
+  color: #475569;
+  background: #f1f5f9;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.capability-badge.type-skill {
+  color: #6d28d9;
+  background: #f3e8ff;
+}
+
+.capability-badge.type-tool {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.capability-badge.type-mcp {
+  color: #0f766e;
+  background: #ecfdf5;
+}
+
+.capability-badge.type-subagent {
+  color: #9a3412;
+  background: #fff7ed;
+}
+
+.capability-badge.type-interaction {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.execution-step-row time {
+  min-width: 46px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.execution-step-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 180ms ease-out;
+}
+
+.process-timeline-step[open] > summary .execution-step-chevron {
+  transform: rotate(180deg);
+}
+
+.execution-step-detail {
+  display: grid;
+  gap: 7px;
+  margin: 1px 22px 9px 26px;
+  padding: 8px 10px;
+  border-left: 2px solid #dbeafe;
+  background: #f8fafc;
+}
+
+.execution-detail-field {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 9px;
+}
+
+.execution-detail-field > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.execution-detail-field > p {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.execution-detail-field.field-error > p {
+  color: var(--red);
+}
+
+.execution-children {
+  position: relative;
+  margin-left: 9px;
+  padding-left: 24px;
+}
+
+.execution-children::before {
+  position: absolute;
+  top: 0;
+  bottom: 20px;
+  left: 0;
+  width: 1px;
+  background: #dbe3ee;
+  content: "";
+}
+
+.execution-children > .execution-node::after {
+  position: absolute;
+  top: 20px;
+  left: -24px;
+  width: 17px;
+  height: 1px;
+  background: #dbe3ee;
+  content: "";
+}
+
+.execution-children > .execution-node:last-child::before {
+  display: none;
+}
+
+.important-execution-card {
+  margin: 5px 0 8px 26px;
+  padding: 0 10px;
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+  background: #fffaf5;
+}
+
+.important-execution-card > .execution-step-detail {
+  margin-right: 0;
+  margin-left: 26px;
+  background: #fff;
+}
+
+.confirmation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px 26px;
+  padding: 12px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 9px;
+  background: #fffaf5;
+}
+
+.confirmation-actions p {
+  color: #7c2d12;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.confirmation-actions .confirmation-result {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.confirmation-actions > div {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.confirmation-button {
+  min-width: 88px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 180ms ease, border-color 180ms ease, opacity 180ms ease;
+}
+
+.confirmation-button.primary {
+  color: #fff;
+  border: 1px solid #b45309;
+  background: #b45309;
+}
+
+.confirmation-button.primary:hover:not(:disabled) {
+  background: #92400e;
+}
+
+.confirmation-button.secondary {
+  color: #7c2d12;
+  border: 1px solid #fdba74;
+  background: #fff;
+}
+
+.confirmation-button.secondary:hover:not(:disabled) {
+  background: #ffedd5;
+}
+
+.confirmation-button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+
+@media (max-width: 640px) {
+  .confirmation-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .confirmation-actions > div {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.execution-artifacts {
+  display: grid;
+  gap: 8px;
+}
+
+.execution-artifact-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 10px;
+  padding: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.execution-artifact-card strong,
+.execution-artifact-card span,
+.execution-artifact-card p {
+  font-size: 12px;
+}
+
+.execution-artifact-card span,
+.execution-artifact-card p {
+  color: var(--muted);
+}
+
+.execution-artifact-card p {
+  grid-column: 1 / -1;
+}
+
+.message-process .process-empty,
+.message-process .process-loading {
+  padding: 9px 2px;
+}
+
+@media (max-width: 680px) {
+  .process-summary-meta {
+    display: none;
+  }
+
+  .message-process .execution-step-row {
+    grid-template-columns: 18px minmax(0, 1fr) auto 16px;
+  }
+
+  .execution-step-row time {
+    display: none;
+  }
+
+  .capability-badge {
+    max-width: 105px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .execution-step-detail {
+    margin-right: 0;
+  }
+
+  .execution-detail-field {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .execution-children {
+    padding-left: 18px;
+  }
+
+  .execution-children > .execution-node::after {
+    left: -18px;
+    width: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-spinner {
+    animation: none;
+  }
+
+  .execution-step-chevron {
+    transition: none;
+  }
+}

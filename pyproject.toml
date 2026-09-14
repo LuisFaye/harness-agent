@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sb-agent"
+version = "0.1.0"
+description = "A small Agno-powered general task agent with pluggable skills."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "agno==2.7.3",
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "jsonschema>=4.0.0",
+    "mcp>=1.9.2",
+    "openai>=1.0.0",
+    "openpyxl>=3.1.0",
+    "Pillow>=10.0.0",
+    "pypdf>=5.0.0",
+    "DBUtils>=3.1.0",
+    "PyMySQL>=1.1.0",
+    "python-docx>=1.1.0",
+    "python-multipart>=0.0.9",
+    "sqlglot>=27.0.0",
+    "uvicorn>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+sb-agent = "daily_agent.cli:main"
+sb-agent-api = "daily_agent.api:run"
+sb-agent-worker = "daily_agent.worker:main"
+daily-agent = "daily_agent.cli:main"
+daily-agent-api = "daily_agent.api:run"
+daily-agent-worker = "daily_agent.worker:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/daily_agent"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"sql/mysql_memory.sql" = "daily_agent/sql/mysql_memory.sql"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = ["src"]

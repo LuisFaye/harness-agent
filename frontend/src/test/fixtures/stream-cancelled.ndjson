@@ -1,0 +1,3 @@
+{"version":"2.0","run_id":"ask-fixture-cancelled","sequence":1,"type":"run_started","timestamp":"2026-07-28T10:20:00+08:00","payload":{"status":"running"}}
+{"version":"2.0","run_id":"ask-fixture-cancelled","sequence":2,"type":"run_cancel_requested","timestamp":"2026-07-28T10:20:00.100000+08:00","payload":{"status":"cancel_requested"}}
+{"version":"2.0","run_id":"ask-fixture-cancelled","sequence":3,"type":"run_cancelled","timestamp":"2026-07-28T10:20:00.200000+08:00","payload":{"status":"cancelled","reason":"用户取消任务","result":{"run_id":"ask-fixture-cancelled","status":"cancelled","execution_source":"agent_loop","error_stage":"cancellation","response_text":"任务已取消。","stop_reason":"用户取消任务","missing_info":[],"plan":null,"observations":[],"trace":[],"prompt_snapshot":null}}}

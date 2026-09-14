@@ -1,0 +1,141 @@
+-- 为 sb_agent 记忆库表与字段添加中文注释（可重复执行）
+-- 用法：在 sb_agent 库中执行本文件
+
+ALTER TABLE user_preferences COMMENT = '用户结构化偏好表（如 home_city、risk_preference）';
+
+ALTER TABLE user_preferences
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识，默认 default',
+    MODIFY COLUMN pref_key VARCHAR(128) NOT NULL COMMENT '偏好键名',
+    MODIFY COLUMN pref_value TEXT NOT NULL COMMENT '偏好值',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+
+ALTER TABLE conversation_memories COMMENT = '长期自然语言记忆表（手动 remember 或自动提取）';
+
+ALTER TABLE conversation_memories
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN memory_text TEXT NOT NULL COMMENT '记忆正文',
+    MODIFY COLUMN source VARCHAR(64) NOT NULL DEFAULT 'manual' COMMENT '来源：manual 手动 / auto 自动提取',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE conversation_messages COMMENT = '短期多轮对话原文表（按 user_id + session_id 存储）';
+
+ALTER TABLE conversation_messages
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN session_id VARCHAR(128) NOT NULL COMMENT '会话标识',
+    MODIFY COLUMN role VARCHAR(16) NOT NULL COMMENT '消息角色（user / assistant / system 等）',
+    MODIFY COLUMN content TEXT NOT NULL COMMENT '消息正文',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE conversation_session_summaries COMMENT = '会话历史压缩摘要表（窗口外旧消息的规则摘要）';
+
+ALTER TABLE conversation_session_summaries
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN session_id VARCHAR(128) NOT NULL COMMENT '会话标识',
+    MODIFY COLUMN summary_text TEXT NOT NULL COMMENT '压缩后的会话摘要正文',
+    MODIFY COLUMN summarized_message_count INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '已纳入摘要的消息条数',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+
+ALTER TABLE conversation_session_titles COMMENT = '会话语义标题表（首次生成后保持稳定）';
+
+ALTER TABLE conversation_session_titles
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN session_id VARCHAR(128) NOT NULL COMMENT '会话标识',
+    MODIFY COLUMN title VARCHAR(64) NOT NULL COMMENT '首次有效问答生成的语义短标题',
+    MODIFY COLUMN source VARCHAR(32) NOT NULL DEFAULT 'model' COMMENT '标题来源：model 模型生成 / manual 人工设置',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+
+ALTER TABLE task_history COMMENT = '任务执行历史表（ask / 命令等，供排查与上下文摘要）';
+
+ALTER TABLE task_history
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN task_type VARCHAR(64) NOT NULL COMMENT '任务类型（如 ask、plan）',
+    MODIFY COLUMN user_input TEXT NOT NULL COMMENT '用户输入原文',
+    MODIFY COLUMN output_summary TEXT NULL COMMENT '输出摘要',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL COMMENT '执行状态（如 success、error）',
+    MODIFY COLUMN error_message TEXT NULL COMMENT '失败时的错误信息',
+    MODIFY COLUMN metadata_json JSON NULL COMMENT '扩展元数据 JSON',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE tool_call_logs COMMENT = '工具调用日志表';
+
+ALTER TABLE tool_call_logs
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN tool_name VARCHAR(128) NOT NULL COMMENT '工具名称',
+    MODIFY COLUMN input_json JSON NULL COMMENT '调用入参 JSON',
+    MODIFY COLUMN output_summary TEXT NULL COMMENT '输出摘要',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL COMMENT '调用状态',
+    MODIFY COLUMN error_message TEXT NULL COMMENT '失败时的错误信息',
+    MODIFY COLUMN duration_ms INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '耗时（毫秒）',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE react_pause_states COMMENT = 'ReAct 暂停态持久化表';
+
+ALTER TABLE react_pause_states
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN session_id VARCHAR(128) NOT NULL COMMENT '会话标识',
+    MODIFY COLUMN run_id VARCHAR(128) NOT NULL COMMENT '关联一次 ReAct 暂停执行的运行 ID',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL COMMENT '状态：needs_confirmation / paused / cancelled / completed',
+    MODIFY COLUMN payload_json JSON NOT NULL COMMENT '暂停时的运行快照 JSON',
+    MODIFY COLUMN expires_at DATETIME NULL COMMENT '过期时间，过期后可自动清理',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE skill_session_states COMMENT = '技能多轮会话状态表';
+
+ALTER TABLE skill_session_states
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN session_id VARCHAR(128) NOT NULL COMMENT '会话标识',
+    MODIFY COLUMN skill_name VARCHAR(128) NOT NULL COMMENT '技能名称',
+    MODIFY COLUMN tool_name VARCHAR(128) NULL COMMENT '工具名称',
+    MODIFY COLUMN interaction_mode VARCHAR(32) NOT NULL DEFAULT 'deterministic' COMMENT '技能交互模式：deterministic / react_tool',
+    MODIFY COLUMN run_id VARCHAR(128) NULL COMMENT '关联一次 ask / skill 执行的运行 ID',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL COMMENT '状态：needs_input / needs_confirmation / paused / completed / cancelled',
+    MODIFY COLUMN inputs_json JSON NOT NULL COMMENT '当前已收集输入 JSON',
+    MODIFY COLUMN state_json JSON NOT NULL COMMENT '运行时附加状态 JSON',
+    MODIFY COLUMN expires_at DATETIME NULL COMMENT '过期时间，过期后可自动清理',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间';
+
+ALTER TABLE scheduled_jobs COMMENT = '定时任务定义表';
+
+ALTER TABLE scheduled_jobs
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN job_type VARCHAR(64) NOT NULL COMMENT '任务类型（目前为 daily_report）',
+    MODIFY COLUMN title VARCHAR(255) NOT NULL COMMENT '任务标题',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL DEFAULT 'enabled' COMMENT '任务状态（enabled / disabled 等）',
+    MODIFY COLUMN schedule_kind VARCHAR(32) NOT NULL DEFAULT 'daily_time' COMMENT '调度方式（daily_time 表示每天固定时刻）',
+    MODIFY COLUMN schedule_time VARCHAR(8) NOT NULL COMMENT '每天执行时刻，格式 HH:MM',
+    MODIFY COLUMN timezone VARCHAR(64) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT 'schedule_time 所属时区',
+    MODIFY COLUMN config_json JSON NULL COMMENT '业务配置 JSON（如日报仓库列表 repos）',
+    MODIFY COLUMN last_run_at DATETIME NULL COMMENT '最近一次开始执行时间',
+    MODIFY COLUMN next_run_at DATETIME NOT NULL COMMENT '下次应被 worker 扫描执行的时间',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    MODIFY COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+
+ALTER TABLE scheduled_job_runs COMMENT = '定时任务执行记录表';
+
+ALTER TABLE scheduled_job_runs
+    MODIFY COLUMN id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '自增主键',
+    MODIFY COLUMN job_id BIGINT UNSIGNED NOT NULL COMMENT '关联 scheduled_jobs.id',
+    MODIFY COLUMN user_id VARCHAR(128) NOT NULL COMMENT '用户标识',
+    MODIFY COLUMN status VARCHAR(32) NOT NULL COMMENT '执行状态',
+    MODIFY COLUMN started_at DATETIME NOT NULL COMMENT '开始时间',
+    MODIFY COLUMN finished_at DATETIME NULL COMMENT '结束时间',
+    MODIFY COLUMN output_text LONGTEXT NULL COMMENT '执行输出（如日报正文）',
+    MODIFY COLUMN error_message TEXT NULL COMMENT '失败时的错误信息',
+    MODIFY COLUMN metadata_json JSON NULL COMMENT '扩展元数据 JSON',
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间';

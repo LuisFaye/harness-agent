@@ -1,0 +1,179 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f2;
+  --surface-tint: #f0f7f5;
+  --ink: #202124;
+  --text: #35383d;
+  --muted: #667085;
+  --faint: #98a2b3;
+  --border: #e1e2e4;
+  --border-soft: #e6e7e9;
+  --primary: #0f766e;
+  --primary-strong: #0b5f59;
+  --primary-soft: #e9f5f2;
+  --blue: #2563eb;
+  --amber: #b45309;
+  --red: #b42318;
+  --green: #166534;
+  --sidebar: #f1f1ef;
+  --sidebar-soft: #e8e8e5;
+  --sidebar-muted: #6f737a;
+  --shadow: 0 24px 60px rgba(32, 33, 36, 0.14);
+  --shadow-sm: 0 10px 30px rgba(32, 33, 36, 0.1);
+  --radius: 10px;
+  --radius-lg: 14px;
+  --sidebar-width: 72px;
+  --session-width: 264px;
+  --content-max: 860px;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --z-nav: 40;
+  --z-scrim: 60;
+  --z-drawer: 80;
+  --z-modal: 100;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 14px;
+  color: #fff;
+  border-radius: var(--radius);
+  background: var(--primary-strong);
+  transform: translateY(-150%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.25);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  color: var(--ink);
+  background: var(--surface);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(15, 143, 126, 0.65);
+  box-shadow: 0 0 0 4px rgba(15, 143, 126, 0.1);
+  outline: none;
+}
+
+svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+th,
+td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+th {
+  color: var(--muted);
+  background: var(--surface-muted);
+  font-weight: 700;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted {
+  color: var(--muted);
+}

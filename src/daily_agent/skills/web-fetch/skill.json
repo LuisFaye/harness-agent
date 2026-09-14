@@ -1,0 +1,28 @@
+{
+  "id": "web-fetch",
+  "tool_name": "web_fetch",
+  "description": "读取网页正文、标题和最终 URL，支持公网、本机和局域网地址。搜索只负责找到页面，需要核对事实、提取正文或引用来源时调用此工具。",
+  "tools": ["web_fetch"],
+  "triggers": ["读取网页", "网页正文", "打开链接", "核对来源", "查看页面"],
+  "intent_examples": [
+    "读取这个网页的正文",
+    "打开搜索结果并核对原文",
+    "查看这个官方文档页面说了什么"
+  ],
+  "interaction_mode": "react_tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "title": "网页 URL",
+        "description": "需要读取的完整 http 或 https URL。"
+      }
+    },
+    "required": ["url"]
+  },
+  "execution": {
+    "type": "python_callable",
+    "entrypoint": "daily_agent.skill_handlers.web_fetch:run"
+  }
+}

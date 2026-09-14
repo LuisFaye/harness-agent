@@ -1,0 +1,181 @@
+.conversation-workspace {
+  --conversation-width: 740px;
+  background: var(--background);
+}
+
+.conversation-workspace > div:last-child {
+  background: var(--background);
+}
+
+.conversation-workspace > div > header {
+  min-height: 64px;
+  background: var(--background);
+  border-color: color-mix(in srgb, var(--border) 65%, transparent);
+  padding-inline: clamp(16px, 3vw, 32px);
+}
+
+.conversation-composer {
+  width: 100%;
+  max-width: var(--conversation-width);
+  margin-inline: auto;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  background: var(--background);
+}
+
+.conversation-composer form {
+  background: var(--card);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px -8px color-mix(in srgb, var(--foreground) 15%, transparent);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.conversation-composer textarea {
+  min-height: 64px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.composer-attachments {
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  margin-bottom: 4px;
+  padding-bottom: 8px;
+}
+
+.composer-attachment-chip {
+  max-width: min(100%, 240px);
+}
+
+.conversation-message .markdown-content {
+  line-height: 1.75;
+  letter-spacing: 0.005em;
+}
+
+.conversation-message .markdown-content h2 {
+  margin-top: 1.7rem;
+  letter-spacing: -0.02em;
+}
+
+.conversation-message .markdown-content blockquote {
+  border-left-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  border-radius: 0 8px 8px 0;
+  background: var(--background);
+  padding: 10px 16px;
+}
+
+.conversation-message.is-user > div:first-child {
+  border-radius: 20px 20px 6px 20px;
+  border-color: color-mix(in srgb, var(--primary) 8%, var(--border));
+  padding: 14px 18px;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.conversation-actions {
+  justify-content: flex-start;
+  gap: 4px;
+  color: var(--muted-foreground);
+}
+
+.conversation-actions button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.answer-activity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 99px;
+  background: var(--primary-soft);
+  padding: 4px 9px;
+  color: var(--accent-foreground);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.answer-activity-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: answer-breathe 1.5s ease-in-out infinite;
+}
+
+.answer-placeholder {
+  display: grid;
+  gap: 10px;
+  max-width: 440px;
+  padding-block: 12px;
+}
+
+.answer-placeholder span {
+  height: 9px;
+  border-radius: 99px;
+  background: var(--muted);
+  animation: answer-breathe 1.5s ease-in-out infinite;
+}
+
+.answer-placeholder span:nth-child(2) { width: 87%; }
+.answer-placeholder span:nth-child(3) { width: 58%; }
+
+.execution-progress {
+  border-left: 2px solid var(--border);
+  margin-left: 15px;
+  padding: 4px 0 4px 16px;
+}
+
+.conversation-message [aria-label="执行过程"] button {
+  min-height: 36px;
+}
+
+@keyframes answer-breathe {
+  50% { opacity: 0.45; }
+}
+
+@media (max-width: 639px) {
+  .conversation-workspace > div > header { min-height: 64px; }
+  .conversation-message .markdown-content { font-size: 15px; line-height: 1.8; }
+  .conversation-composer textarea { min-height: 60px; }
+  .conversation-message [aria-label="执行过程"] button { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer-activity-dot,
+  .answer-placeholder span { animation: none; }
+  .conversation-composer form { transition: none; }
+}
+
+.conversation-workspace [data-slot="message-scroller-item"] > :is(div, section) {
+  max-width: var(--conversation-width);
+}
+
+.conversation-message {
+  margin-bottom: 20px;
+}
+
+.conversation-message.is-user {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  row-gap: 2px;
+  margin-bottom: 16px;
+}
+
+.conversation-message.is-user > div:first-child {
+  grid-column: 1 / -1;
+  justify-self: end;
+  padding: 10px 14px;
+}
+
+.conversation-message.is-user > div:nth-child(2) {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 36px;
+}
+
+.conversation-message.is-user > div:last-child {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: end;
+  align-self: center;
+}

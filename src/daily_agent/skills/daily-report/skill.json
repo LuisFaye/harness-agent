@@ -1,0 +1,36 @@
+{
+  "id": "daily-report",
+  "tool_name": "daily_report",
+  "description": "根据 git 提交记录生成工作日报：扫描指定仓库当天的提交，结合用户补充的代码之外的工作，生成结构化日报。",
+  "triggers": ["/daily-report", "/daily_report", "日报", "工作总结", "今天做了什么"],
+  "intent_examples": ["帮我生成今天的日报", "总结今天做了什么", "生成工作日报"],
+  "interaction_mode": "react_tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "repos": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "要扫描的 git 仓库路径列表；不传时默认当前项目目录。"
+      },
+      "target_date": {
+        "type": "string",
+        "description": "日报日期，格式 YYYY-MM-DD；不传时默认今天。"
+      },
+      "author": {
+        "type": "string",
+        "description": "可选，只统计该作者的提交。"
+      },
+      "extra_notes": {
+        "type": "array",
+        "items": {"type": "string"},
+        "description": "代码之外的附加工作（会议、沟通、排查、文档等）。"
+      }
+    },
+    "required": []
+  },
+  "execution": {
+    "type": "python_callable",
+    "entrypoint": "daily_agent.skill_handlers.daily_report:run"
+  }
+}

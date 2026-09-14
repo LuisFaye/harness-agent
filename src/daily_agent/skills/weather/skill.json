@@ -1,0 +1,36 @@
+{
+  "id": "weather",
+  "tool_name": "weather_query",
+  "description": "查询全球城市的真实实时天气和未来 1 至 7 天预报。用户问天气、温度、降雨、风速时应调用此工具，不要假装打开网页。",
+  "tools": ["weather_query"],
+  "triggers": ["天气", "气温", "温度", "下雨", "降雨", "预报"],
+  "intent_examples": [
+    "成都今天天气如何",
+    "北京未来三天天气",
+    "上海今天会下雨吗"
+  ],
+  "interaction_mode": "react_tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "city": {
+        "type": "string",
+        "title": "城市",
+        "description": "要查询的城市或地区名称，例如成都、北京市、Tokyo。"
+      },
+      "forecast_days": {
+        "type": "integer",
+        "title": "预报天数",
+        "description": "包含今天在内的预报天数，支持 1 至 7 天，默认 1。",
+        "minimum": 1,
+        "maximum": 7,
+        "default": 1
+      }
+    },
+    "required": ["city"]
+  },
+  "execution": {
+    "type": "python_callable",
+    "entrypoint": "daily_agent.skill_handlers.weather:run"
+  }
+}

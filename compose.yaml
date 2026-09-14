@@ -1,0 +1,47 @@
+name: sb-agent
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: sb_agent
+      MYSQL_ROOT_PASSWORD: ${SB_AGENT_MYSQL_PASSWORD:?请先复制 .env.example 为 .env 并设置 SB_AGENT_MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --user=root --password=$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  app:
+    image: sb-agent:local
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SB_AGENT_MYSQL_HOST: mysql
+      SB_AGENT_MYSQL_PORT: 3306
+      SB_AGENT_MYSQL_USER: root
+      SB_AGENT_MYSQL_PASSWORD: ${SB_AGENT_MYSQL_PASSWORD:?请先复制 .env.example 为 .env 并设置 SB_AGENT_MYSQL_PASSWORD}
+      SB_AGENT_MYSQL_DATABASE: sb_agent
+      SB_AGENT_DATA_DIR: /data
+      SB_AGENT_LOG_DIR: /data/logs
+      SB_AGENT_WORKSPACE_ROOT: /workspace
+      SB_AGENT_API_PORT: 16666
+      SB_AGENT_AGNO_TELEMETRY: "false"
+    ports:
+      - "127.0.0.1:${SB_AGENT_PORT:-16666}:16666"
+    volumes:
+      - sb-agent-data:/data
+      - sb-agent-workspace:/workspace
+
+volumes:
+  mysql-data:
+  sb-agent-data:
+  sb-agent-workspace:

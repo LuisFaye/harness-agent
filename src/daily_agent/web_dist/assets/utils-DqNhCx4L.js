@@ -1,0 +1,1 @@
+import{n as e,t}from"./bundle-mjs-B_AA55HL.js";function n(...n){return t(e(n))}export{n as t};

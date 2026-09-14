@@ -1,0 +1,3 @@
+{"version":"2.0","run_id":"ask-fixture-recovery","sequence":1,"type":"run_started","timestamp":"2026-07-28T10:40:00+08:00","payload":{"status":"running"}}
+{"version":"2.0","run_id":"ask-fixture-recovery","sequence":2,"type":"response_started","timestamp":"2026-07-28T10:40:00.100000+08:00","payload":{}}
+{"version":"2.0","run_id":"ask-fixture-recovery","sequence":3,"type":"response_delta","timestamp":"2026-07-28T10:40:00.200000+08:00","payload":{"delta":"断流前"}}

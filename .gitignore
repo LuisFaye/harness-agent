@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
+coverage/
+htmlcov/
+.coverage
+
+# 本地配置与凭据
+.env
+.env.*
+!.env.example
+config.toml
+!config.example.toml
+
+# 构建与依赖
+dist/
+build/
+node_modules/
+
+# 编辑器与本地 Agent 工具
+/.cursor/
+/.idea/
+/.serena/
+
+# SB Agent 运行数据与本地产物
+/.daily-agent/
+/.sb-agent/
+/logs/
+/outputs/
+/shots/
+*.log

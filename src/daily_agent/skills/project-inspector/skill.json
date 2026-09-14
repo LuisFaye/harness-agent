@@ -1,0 +1,38 @@
+{
+  "id": "project-inspector",
+  "tool_name": "project_inspector",
+  "description": "检查当前项目结构，梳理关键目录、入口文件和主要流程。",
+  "tools": ["inspect_project"],
+  "triggers": [
+    "/project",
+    "/inspect-project",
+    "项目结构",
+    "当前项目",
+    "代码结构",
+    "工程结构",
+    "仓库结构",
+    "项目梳理"
+  ],
+  "intent_examples": [
+    "帮我梳理当前项目结构",
+    "说明这个仓库的主要模块",
+    "当前项目的聊天流程在哪里",
+    "说明聊天和调度两条主流程"
+  ],
+  "interaction_mode": "react_tool",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "title": "项目路径",
+        "description": "要检查的项目目录；不填时默认当前工作目录"
+      }
+    },
+    "required": []
+  },
+  "execution": {
+    "type": "python_callable",
+    "entrypoint": "daily_agent.skill_handlers.project_inspector:run"
+  }
+}
