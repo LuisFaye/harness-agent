@@ -67,7 +67,7 @@ export function ContextUsageDialog({
         render={
           <Button
             aria-label={triggerAriaLabel}
-            className="h-11 rounded-full px-3 text-xs font-semibold"
+            className="h-7 gap-1.5 rounded-lg px-2 text-[11px] font-normal text-muted-foreground/80 hover:bg-muted/60 hover:text-foreground"
             title="上下文详情"
             variant="ghost"
           >
@@ -253,7 +253,7 @@ function ContextRing({ percent }: { percent: number | null }) {
   return (
     <svg
       aria-hidden="true"
-      className="size-5 shrink-0 [&>circle]:fill-none"
+      className="size-3.5 shrink-0 [&>circle]:fill-none"
       viewBox="0 0 20 20"
     >
       <circle

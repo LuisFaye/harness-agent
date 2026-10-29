@@ -27,7 +27,7 @@ export function SettingsPage() {
 
   function save(payload: ModelConfigWritePayload) {
     testMutation.reset();
-    saveMutation.mutate(payload);
+    return saveMutation.mutateAsync(payload);
   }
 
   return (

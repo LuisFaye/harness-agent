@@ -20,7 +20,7 @@ export function ThemeToggle() {
           <Button
             aria-label={label}
             onClick={() => setTheme(nextTheme)}
-            size="icon"
+            size="icon-sm"
             variant="ghost"
           />
         }

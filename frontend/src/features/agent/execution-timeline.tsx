@@ -1,7 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import { ChevronDown, Diamond } from "lucide-react";
-import type { ReactNode } from "react";
-import { useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 
 import { ShimmerText } from "@/components/ui/shimmer-text";
 import type { TraceItem } from "@/lib/stream/schemas";
@@ -11,7 +10,6 @@ import {
   buildExecutionViewModels,
   isStepActive,
   toolNarrative,
-  toolStatusLabel,
   type ExecutionViewModel,
   type ToolCallViewModel,
 } from "./execution-view-model";
@@ -29,29 +27,149 @@ export function ExecutionTimeline({
   active,
   answerStreaming = false,
   items,
+  defaultOpen = false,
 }: ExecutionTimelineProps) {
-  const viewModels = buildExecutionViewModels(items, active)
+  const allViewModels = buildExecutionViewModels(items, active)
     .filter((item) => !(item.kind === "tool" && ["final", "citations"].includes(item.tool.key)));
-  const hasActiveStep = viewModels.some(isStepActive);
+  const hasSubstantiveSteps = allViewModels.some(
+    (item) => item.kind === "reasoning" || item.kind === "tool",
+  );
+  const viewModels = hasSubstantiveSteps
+    ? allViewModels.filter((item) => item.kind !== "narrative")
+    : allViewModels;
 
-  if (!viewModels.length && (!active || answerStreaming)) {
+  const isLiveStep = active && !answerStreaming;
+  const [open, setOpen] = useState<boolean>(defaultOpen);
+
+  if (!allViewModels.length && !isLiveStep) {
     return null;
   }
 
+  const summaryText = buildTimelineSummary(allViewModels, active, answerStreaming);
+  const liveSnippet = isLiveStep && !open ? extractLiveThoughtSnippet(allViewModels) : "";
+  const hasError = viewModels.some((item) => item.kind === "tool" && item.tool.state === "error");
+  const canExpand = viewModels.length > 0;
+
+  if (!canExpand) {
+    return (
+      <section aria-label="执行过程" className="execution-progress mb-1.5">
+        <div
+          aria-label={`思考过程：${summaryText}`}
+          className="-ml-1 inline-flex max-w-full items-center gap-2 px-1 py-0.5 text-xs font-medium text-muted-foreground"
+          role="status"
+        >
+          <span aria-hidden="true" className="execution-orb" />
+          <span className="execution-ticker-text truncate" key={summaryText}>
+            <ShimmerText>{summaryText}</ShimmerText>
+          </span>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section aria-label="执行过程" className="execution-progress mb-3">
-      <div aria-live={active ? "polite" : undefined} className="space-y-2">
-        {viewModels.map((item) => (
-          <ExecutionStreamStep item={item} key={streamKey(item)} />
-        ))}
-        {active && !answerStreaming && !hasActiveStep ? (
-          <p className="py-0.5 text-sm" role="status">
-            <ShimmerText>{viewModels.length ? "正在整理已有信息…" : "正在分析需求…"}</ShimmerText>
-          </p>
-        ) : null}
-      </div>
+    <section aria-label="执行过程" className="execution-progress mb-1.5">
+      <Collapsible.Root
+        className="group/timeline"
+        onOpenChange={setOpen}
+        open={open}
+      >
+        <Collapsible.Trigger
+          aria-label={`思考过程：${summaryText}`}
+          className={cn(
+            "-ml-1.5 inline-flex max-w-full items-center gap-2 rounded-lg px-1.5 py-0.5 text-left text-xs font-medium transition-colors outline-none",
+            "text-muted-foreground/90 hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              isLiveStep
+                ? "execution-orb"
+                : cn(
+                    "size-1.5 shrink-0 rounded-full transition-colors",
+                    hasError ? "bg-destructive/80" : "bg-muted-foreground/45",
+                  ),
+            )}
+          />
+          <span className="execution-ticker-text shrink-0" key={summaryText}>
+            {isLiveStep ? (
+              <ShimmerText>{summaryText}</ShimmerText>
+            ) : (
+              <span>{summaryText}</span>
+            )}
+          </span>
+          {liveSnippet ? (
+            <span className="execution-ticker-text hidden max-w-[260px] truncate font-normal text-muted-foreground/55 sm:inline">
+              · {liveSnippet}
+            </span>
+          ) : null}
+          <ChevronRight
+            aria-hidden="true"
+            className="size-3.5 shrink-0 opacity-45 transition-transform duration-200 ease-out group-hover/timeline:translate-x-0.5 group-hover/timeline:opacity-75 group-data-[open]/timeline:translate-x-0 group-data-[open]/timeline:rotate-90"
+          />
+        </Collapsible.Trigger>
+
+        <Collapsible.Panel className="execution-panel mt-1.5 ml-1">
+          <div
+            aria-live={active ? "polite" : undefined}
+            className="execution-thread space-y-2 pl-3.5 py-0.5"
+          >
+            {viewModels.map((item) => (
+              <ExecutionStreamStep item={item} key={streamKey(item)} />
+            ))}
+          </div>
+        </Collapsible.Panel>
+      </Collapsible.Root>
     </section>
   );
+}
+
+function buildTimelineSummary(
+  viewModels: ExecutionViewModel[],
+  active: boolean,
+  answerStreaming: boolean,
+): string {
+  if (active && !answerStreaming) {
+    const activeItem = [...viewModels].reverse().find(isStepActive);
+    if (activeItem) {
+      if (activeItem.kind === "reasoning") {
+        return activeItem.reasoning.summary;
+      }
+      if (activeItem.kind === "tool") {
+        return `正在${toolNarrative(activeItem.tool)}`;
+      }
+      return activeItem.narrative.text;
+    }
+    return viewModels.length ? "正在整理信息…" : "正在思考…";
+  }
+
+  const toolCount = viewModels.filter((item) => item.kind === "tool").length;
+  const hasReasoning = viewModels.some((item) => item.kind === "reasoning");
+  if (hasReasoning && toolCount > 0) {
+    return `已思考 · ${toolCount} 步`;
+  }
+  if (toolCount > 0) {
+    return `已完成 ${toolCount} 步`;
+  }
+  return "已思考";
+}
+
+function extractLiveThoughtSnippet(viewModels: ExecutionViewModel[]): string {
+  for (let i = viewModels.length - 1; i >= 0; i -= 1) {
+    const item = viewModels[i];
+    if (item?.kind === "reasoning" && item.reasoning.content) {
+      const lines = item.reasoning.content
+        .split(/\r?\n/)
+        .map((line) => line.replace(/^[#>*-\s]+/, "").trim())
+        .filter(Boolean);
+      const lastLine = lines.at(-1);
+      if (lastLine) {
+        return lastLine.slice(0, 48);
+      }
+    }
+  }
+  return "";
 }
 
 function ExecutionStreamStep({ item }: { item: ExecutionViewModel }) {
@@ -59,7 +177,16 @@ function ExecutionStreamStep({ item }: { item: ExecutionViewModel }) {
     return <ReasoningStreamStep item={item} />;
   }
   if (item.kind === "narrative") {
-    return <NarrativeStreamStep item={item} />;
+    return (
+      <p className="relative text-[12.5px] leading-relaxed text-muted-foreground/85">
+        <span aria-hidden="true" className="execution-node" />
+        {item.narrative.isStreaming ? (
+          <ShimmerText>{item.narrative.text}</ShimmerText>
+        ) : (
+          item.narrative.text
+        )}
+      </p>
+    );
   }
   return <ToolStreamStep item={item.tool} />;
 }
@@ -70,208 +197,54 @@ function ReasoningStreamStep({
   item: Extract<ExecutionViewModel, { kind: "reasoning" }>;
 }) {
   const reasoning = item.reasoning;
-  const active = reasoning.isStreaming;
-  const userToggledRef = useRef(false);
-  const [open, setOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
   const content = reasoning.content || "暂无可公开的分析摘要。";
 
-  useEffect(() => {
-    if (userToggledRef.current) {
-      return;
-    }
-    if (!active) setOpen(false);
-  }, [active]);
-
-  useEffect(() => {
-    if (!active || !open || !contentRef.current) {
-      return;
-    }
-    contentRef.current.scrollTop = contentRef.current.scrollHeight;
-  }, [active, content, open]);
-
   return (
-    <Collapsible.Root
-      className="group/reasoning"
-      onOpenChange={(next) => {
-        userToggledRef.current = true;
-        setOpen(next);
-      }}
-      open={open}
-    >
-      <Collapsible.Trigger
-        className="flex items-center gap-1.5 rounded-sm py-0.5 text-left text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        {active ? (
-          <ShimmerText>{reasoning.summary}</ShimmerText>
-        ) : (
-          <span>{reasoning.summary}</span>
+    <div className="relative text-[12.5px] leading-[1.68] text-muted-foreground/85">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "execution-node",
+          reasoning.isStreaming && "execution-node-active",
         )}
-        <ChevronDown
-          aria-hidden="true"
-          className="size-3.5 shrink-0 opacity-60 transition-transform group-data-[open]/reasoning:rotate-180"
-        />
-      </Collapsible.Trigger>
-      <Collapsible.Panel className="mt-1 border-l border-border/60 pl-3 text-sm leading-relaxed text-muted-foreground/90">
-        <div className="max-h-48 overflow-y-auto" ref={contentRef}>
-          <p className="whitespace-pre-wrap">{content}</p>
-          {reasoning.isTruncated ? (
-            <p className="mt-1 text-xs text-muted-foreground/80">思考内容较长，已截断展示。</p>
-          ) : null}
-        </div>
-      </Collapsible.Panel>
-    </Collapsible.Root>
-  );
-}
-
-function NarrativeStreamStep({
-  item,
-}: {
-  item: Extract<ExecutionViewModel, { kind: "narrative" }>;
-}) {
-  const narrative = item.narrative;
-  return (
-    <p className="py-1 text-[15px] leading-7 text-foreground/90">
-      {narrative.isStreaming ? (
-        <ShimmerText>{narrative.text}</ShimmerText>
-      ) : (
-        narrative.text
-      )}
-    </p>
+      />
+      <p className="whitespace-pre-wrap">{content}</p>
+    </div>
   );
 }
 
 function ToolStreamStep({ item }: { item: ToolCallViewModel }) {
-  const [detailOpen, setDetailOpen] = useState(false);
   const active = item.state === "running";
-  const status = toolStatusLabel(item);
   const label = toolNarrative(item);
-  const hasDetail = item.input !== null
-    || item.output !== null
-    || item.error !== null;
+  const errorText = item.state === "error" && item.error
+    ? String(item.error)
+    : null;
 
   return (
-    <div>
-      <button
-        aria-expanded={detailOpen}
+    <div
+      className={cn(
+        "relative flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[12.5px] leading-relaxed",
+        item.state === "error" ? "text-destructive/90" : "text-muted-foreground/85",
+      )}
+    >
+      <span
+        aria-hidden="true"
         className={cn(
-          "flex w-full items-center gap-2 rounded-sm py-0.5 text-left text-sm outline-none",
-          "hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring",
-          item.state === "error" ? "text-destructive/90" : "text-muted-foreground",
+          "execution-node",
+          active && "execution-node-active",
+          item.state === "error" && "execution-node-error",
         )}
-        onClick={() => setDetailOpen((current) => !current)}
-        type="button"
-      >
-        <Diamond aria-hidden="true" className="size-3 shrink-0 opacity-70" />
-        {active ? (
-          <ShimmerText className="min-w-0 flex-1 truncate text-[13px]">
-            {label}
-          </ShimmerText>
-        ) : (
-          <span className="min-w-0 flex-1 truncate text-[13px] text-foreground/80">
-            {label}
-          </span>
-        )}
-        <span className="shrink-0 text-xs">{status}</span>
-        {item.durationMs !== null ? (
-          <span className="shrink-0 text-xs tabular-nums opacity-80">
-            ({formatDuration(item.durationMs)})
-          </span>
-        ) : null}
-      </button>
-      {detailOpen && hasDetail ? (
-        <div className="mb-1 ml-5 space-y-1 rounded-md bg-muted/25 px-2.5 py-2 text-xs text-muted-foreground">
-          <DetailRow label="工具">
-            <span>{item.name || label}</span>
-          </DetailRow>
-          <DetailRow label="输入">
-            <DetailValue emptyText="本步骤没有结构化输入" value={item.input} />
-          </DetailRow>
-          {item.error !== null && item.error !== undefined && item.error !== "" ? (
-            <DetailRow label="错误">
-              <DetailValue emptyText="没有额外错误信息" value={item.error} />
-            </DetailRow>
-          ) : null}
-          <DetailRow label="结果">
-            <DetailValue
-              emptyText={item.state === "running" ? "正在等待结果" : "没有额外结果摘要"}
-              value={item.output}
-            />
-          </DetailRow>
-        </div>
+      />
+      {active ? (
+        <ShimmerText className="font-medium">{label}</ShimmerText>
+      ) : (
+        <span>{label}</span>
+      )}
+      {errorText ? (
+        <span className="text-xs text-destructive/75">· {errorText}</span>
       ) : null}
     </div>
   );
-}
-
-function DetailRow({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="grid gap-0.5 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-2">
-      <span>{label}</span>
-      <div className="min-w-0 break-words text-foreground/90">{children}</div>
-    </div>
-  );
-}
-
-function DetailValue({
-  emptyText,
-  value,
-}: {
-  emptyText: string;
-  value: unknown;
-}) {
-  if (value === null || value === undefined || value === "") {
-    return <span>{emptyText}</span>;
-  }
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    if (!entries.length) {
-      return <span>{emptyText}</span>;
-    }
-    return (
-      <dl className="space-y-0.5">
-        {entries.map(([key, entryValue]) => (
-          <div className="grid grid-cols-[minmax(3rem,auto)_1fr] gap-1.5" key={key}>
-            <dt>{key}</dt>
-            <dd className="min-w-0 break-words">{renderValue(entryValue)}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  return <>{String(value)}</>;
-}
-
-function renderValue(value: unknown): ReactNode {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return (
-        <ul className="space-y-0.5">
-          {value.map((entry, index) => <li key={index}>{renderValue(entry)}</li>)}
-        </ul>
-      );
-    }
-    return (
-      <dl className="space-y-0.5">
-        {Object.entries(value as Record<string, unknown>).map(([key, entry]) => (
-          <div className="grid grid-cols-[minmax(3rem,auto)_1fr] gap-1.5" key={key}>
-            <dt>{key}</dt>
-            <dd className="min-w-0 break-words">{renderValue(entry)}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-  return String(value);
 }
 
 function streamKey(item: ExecutionViewModel): string {
@@ -282,8 +255,4 @@ function streamKey(item: ExecutionViewModel): string {
     return item.narrative.key;
   }
   return item.tool.key;
-}
-
-function formatDuration(durationMs: number): string {
-  return durationMs < 1000 ? `${durationMs}ms` : `${(durationMs / 1000).toFixed(1)}s`;
 }

@@ -31,6 +31,8 @@ def complete_answer_blocks(value: Any) -> tuple[list[AgentAnswerBlock], str]:
         except (ValueError, TypeError):
             payload = _repair_truncated_json(candidate)
             if payload is None:
+                payload = _extract_embedded_blocks_payload(candidate)
+            if payload is None:
                 # 结构化 JSON 无法解析时，把非空内容原样交给用户，而不是整段丢弃。
                 # 只有明确像工具调用参数等机器内容时才不展示。
                 cleaned = candidate.strip()
@@ -119,15 +121,34 @@ def _repair_truncated_json(text: str) -> Any | None:
         return None
 
 
+_EMBEDDED_BLOCKS_START_RE = re.compile(r'\{\s*"blocks"\s*:\s*\[')
+
+
+def _extract_embedded_blocks_payload(text: str) -> dict[str, Any] | None:
+    """从带有过渡语前缀或尾缀的文本中提取完整或可修复的 blocks JSON 对象。"""
+    match = _EMBEDDED_BLOCKS_START_RE.search(text)
+    if not match:
+        return None
+    embedded = strip_json_fence(text[match.start():]).strip()
+    decoder = json.JSONDecoder(strict=False)
+    try:
+        payload, _ = decoder.raw_decode(embedded)
+    except (ValueError, TypeError):
+        payload = _repair_truncated_json(embedded)
+    if isinstance(payload, dict) and isinstance(payload.get("blocks"), list):
+        return payload
+    return None
+
+
 def _repair_truncated_blocks_json(text: str) -> dict[str, Any] | None:
     """兼容旧调用：只修复含 blocks 数组的对象。"""
     candidate = text.strip()
     if not candidate.startswith("{") or '"blocks"' not in candidate:
-        return None
+        return _extract_embedded_blocks_payload(candidate)
     payload = _repair_truncated_json(candidate)
     if isinstance(payload, dict) and isinstance(payload.get("blocks"), list):
         return payload
-    return None
+    return _extract_embedded_blocks_payload(candidate)
 
 
 def strip_json_fence(value: str) -> str:

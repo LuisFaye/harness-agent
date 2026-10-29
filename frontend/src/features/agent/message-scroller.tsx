@@ -1,6 +1,6 @@
 import {
   Check,
-  ChevronDown,
+  ChevronRight,
   Copy,
   Download,
   LoaderCircle,
@@ -249,9 +249,23 @@ function MessageItem({
   const answerText = liveProjection
     ? liveProjection.streamedText
     : message.content;
-  const showStreamingAnswer = isLiveAssistant && Boolean(answerText);
+  const activeErrorText = (errorMessage || liveProjection?.error?.message || "").trim();
+  const isDuplicateErrorText = Boolean(
+    isLiveAssistant
+    && (liveProjection?.status === "failed" || Boolean(errorMessage))
+    && activeErrorText
+    && answerText.trim() === activeErrorText,
+  );
+  const showStreamingAnswer = isLiveAssistant && Boolean(answerText) && !isDuplicateErrorText;
   const showPersistedAnswer = !isLiveAssistant && Boolean(message.content);
   const showAnswer = showStreamingAnswer || showPersistedAnswer;
+
+  const isPersistedError = !isUser
+    && !isLiveAssistant
+    && isPersistedErrorReply(answerText);
+  const canDownloadMarkdown = !isUser
+    && !isPersistedError
+    && (answerText.trim().length >= 120 || /[#|`*]/.test(answerText));
 
   async function copyMessage() {
     const text = isLiveAssistant ? liveProjection!.streamedText : message.content;
@@ -265,23 +279,17 @@ function MessageItem({
     const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${message.run_id || "sb-agent-answer"}.md`;
+    link.download = `${message.run_id || "harness-agent-answer"}.md`;
     link.click();
     URL.revokeObjectURL(link.href);
   }
 
   return (
-    <Message className="conversation-message mb-9" from={isUser ? "user" : "assistant"}>
+    <Message className="conversation-message group/message mb-5" from={isUser ? "user" : "assistant"}>
       {!isUser ? (
-        <div className="mb-2 flex min-h-8 items-center gap-2.5 text-xs font-semibold text-muted-foreground">
-          <AgentMark />
-          <span className="text-foreground">SB Agent</span>
-          {answerActive ? (
-            <span className="answer-activity" role="status">
-              <span aria-hidden="true" className="answer-activity-dot" />
-              {answerText ? "正在书写" : "正在处理"}
-            </span>
-          ) : null}
+        <div className="mb-1 flex min-h-6 items-center gap-2 text-xs font-medium text-muted-foreground">
+          <AgentMark className="size-5 [&_svg]:size-3" />
+          <span className="text-[12.5px] font-semibold text-foreground/90">Harness Agent</span>
           {(!isLiveAssistant || answerSettled) ? <MessageTimestamp createdAt={message.created_at} /> : null}
         </div>
       ) : null}
@@ -293,7 +301,7 @@ function MessageItem({
         />
       ) : null}
       {showAnswer || (isUser && messageAttachments.length) ? (
-        <MessageContent className="mt-1">
+        <MessageContent className="mt-0.5">
           {isUser && messageAttachments.length ? (
             <MessageUserAttachments attachments={messageAttachments} />
           ) : null}
@@ -301,15 +309,33 @@ function MessageItem({
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : null}
           {!isUser && showAnswer ? (
-            <Suspense fallback={<MarkdownFallback />}>
-              <HistoricalCitationMessage
-                answerSettled={answerSettled || !answerActive}
-                citationBundle={liveProjection?.citationBundle ?? null}
-                isStreamOrigin={isStreamOrigin}
-                message={message}
-                text={answerText}
-              />
-            </Suspense>
+            isPersistedError ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                <span className="font-mono break-all">{answerText}</span>
+                {isLastAssistant && canRegenerate && onRegenerate ? (
+                  <Button
+                    className="h-6 px-2 text-xs"
+                    disabled={isRunning}
+                    onClick={onRegenerate}
+                    size="xs"
+                    variant="outline"
+                  >
+                    <RotateCcw aria-hidden="true" className="size-3" />
+                    重试
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <Suspense fallback={<MarkdownFallback />}>
+                <HistoricalCitationMessage
+                  answerSettled={answerSettled || !answerActive}
+                  citationBundle={liveProjection?.citationBundle ?? null}
+                  isStreamOrigin={isStreamOrigin}
+                  message={message}
+                  text={answerText}
+                />
+              </Suspense>
+            )
           ) : null}
         </MessageContent>
       ) : answerActive && !showStreamingAnswer && !liveProjection?.timelineItems.length ? (
@@ -334,12 +360,15 @@ function MessageItem({
           projection={liveProjection}
         />
       ) : null}
-      {!isUser && showAnswer && !answerActive ? (
-        <p className="text-xs text-muted-foreground/70">
-          以上内容由 SB Agent 生成，仅供参考。
-        </p>
-      ) : null}
-      {!answerActive ? <MessageActions className={isUser ? "" : "conversation-actions"}>
+      {!answerActive ? <MessageActions
+        className={
+          isUser
+            ? "min-h-6 opacity-0 transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100"
+            : isLastAssistant
+              ? "conversation-actions mt-1 min-h-6"
+              : "conversation-actions mt-1 min-h-6 opacity-0 transition-opacity group-hover/message:opacity-100 group-focus-within/message:opacity-100"
+        }
+      >
         <MessageAction
           disabled={isLiveAssistant && !liveProjection?.responseCompleted}
           label={copied ? "已复制" : "复制消息"}
@@ -347,7 +376,7 @@ function MessageItem({
         >
           {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
         </MessageAction>
-        {!isUser ? (
+        {canDownloadMarkdown ? (
           <MessageAction
             disabled={isLiveAssistant && !liveProjection?.responseCompleted}
             label="下载 Markdown"
@@ -367,7 +396,7 @@ function MessageItem({
         ) : null}
       </MessageActions> : null}
       {isUser ? (
-        <div className="flex min-h-4 items-center justify-end pr-0.5 text-[11px] text-muted-foreground/70">
+        <div className="flex min-h-4 items-center justify-end pr-0.5 text-[11px] text-muted-foreground/70 tabular-nums opacity-0 transition-opacity group-hover/message:opacity-100">
           <MessageTimestamp createdAt={message.created_at} showSeparator={false} />
         </div>
       ) : null}
@@ -443,14 +472,15 @@ function HistoricalCitationMessage({
   const runDetailQuery = useQuery({
     queryKey: ["run", userId, message.session_id, runId],
     queryFn: () => getRun(userId, runId),
-    enabled: Boolean(runId) && visible && !isStreamOrigin && !citationBundle,
+    enabled: Boolean(runId) && visible && !isStreaming && (!citationBundle || citationBundle.status === "partial"),
     retry: false,
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchInterval: (query) => query.state.data && ["running", "queued", "cancel_requested"].includes(query.state.data.status) ? 1000 : false,
   });
   return (
     <div ref={containerRef}>
       <CitationMessageResponse
-        citationBundle={citationBundle ?? runDetailQuery.data?.citation_bundle ?? null}
+        citationBundle={(!isStreaming ? runDetailQuery.data?.citation_bundle : null) ?? citationBundle ?? null}
         settled={isStreamOrigin && answerSettled}
         streaming={isStreamOrigin}
       >
@@ -481,15 +511,15 @@ function MessageRunTimeline({
     return (
       <button
         aria-label="思考过程：查看该轮执行过程"
-        className="mb-3 flex items-center gap-1.5 rounded-sm py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        className="group/history-trigger mb-1.5 -ml-1.5 inline-flex items-center gap-1.5 self-start rounded-lg px-1.5 py-0.5 text-xs font-medium text-muted-foreground/90 transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setRequested(true)}
         type="button"
       >
-        <span>已思考</span>
-        <span className="text-muted-foreground/70">· 查看过程</span>
-        <ChevronDown
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-muted-foreground/45" />
+        <span>已思考 · 查看过程</span>
+        <ChevronRight
           aria-hidden="true"
-          className="size-3.5 shrink-0 opacity-60"
+          className="size-3.5 shrink-0 opacity-45 transition-transform duration-150 group-hover/history-trigger:translate-x-0.5 group-hover/history-trigger:opacity-75"
         />
       </button>
     );
@@ -497,8 +527,8 @@ function MessageRunTimeline({
 
   if (runDetailQuery.isLoading) {
     return (
-      <p className="mb-3 flex items-center gap-1.5 py-1 text-sm text-muted-foreground" role="status">
-        <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+      <p className="mb-1.5 -ml-1.5 inline-flex items-center gap-1.5 self-start px-1.5 py-0.5 text-xs text-muted-foreground" role="status">
+        <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin text-primary" />
         正在加载思考过程…
       </p>
     );
@@ -509,14 +539,14 @@ function MessageRunTimeline({
       && runDetailQuery.error.status === 404;
     if (unavailable) {
       return (
-        <p className="mb-3 rounded-xl border border-border/80 bg-card px-3 py-2.5 text-sm text-muted-foreground">
+        <p className="mb-3 rounded-xl border border-border/80 bg-card px-3.5 py-2.5 text-xs text-muted-foreground shadow-2xs">
           该轮执行过程已不可用。
         </p>
       );
     }
     return (
-      <div className="mb-3 flex min-h-11 items-center gap-3 rounded-xl border border-border/80 bg-card px-3">
-        <p className="min-w-0 flex-1 text-sm text-muted-foreground" role="alert">
+      <div className="mb-3 flex min-h-10 items-center gap-3 rounded-xl border border-border/80 bg-card px-3.5 py-2 shadow-2xs">
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground" role="alert">
           执行过程加载失败。
         </p>
         <Button
@@ -537,6 +567,7 @@ function MessageRunTimeline({
   return (
     <ExecutionTimeline
       active={false}
+      defaultOpen
       items={runProjection.timelineItems}
       startedAt={runProjection.startedAt}
       updatedAt={runProjection.updatedAt}
@@ -548,26 +579,36 @@ function buildDisplayMessages(
   messages: ConversationMessage[],
   projection: RunProjection | null,
 ): ConversationMessage[] {
-  if (!projection?.runId) {
-    return messages;
+  const collapsed: ConversationMessage[] = [];
+  for (const message of messages) {
+    const prev = collapsed.at(-1);
+    if (prev && prev.role === "assistant" && message.role === "assistant") {
+      collapsed[collapsed.length - 1] = message;
+    } else {
+      collapsed.push(message);
+    }
   }
-  const hasPersistedAssistant = messages.some(
+  if (!projection?.runId) {
+    return collapsed;
+  }
+  const hasPersistedAssistant = collapsed.some(
     (message) => message.role === "assistant" && message.run_id === projection.runId,
   );
   if (hasPersistedAssistant) {
-    return messages;
+    return collapsed;
   }
-  return [
-    ...messages,
-    {
-      id: LIVE_ASSISTANT_MESSAGE_ID,
-      session_id: messages.at(-1)?.session_id ?? "",
-      role: "assistant",
-      content: projection.streamedText,
-      created_at: projection.startedAt,
-      run_id: projection.runId,
-    },
-  ];
+  const liveMessage: ConversationMessage = {
+    id: LIVE_ASSISTANT_MESSAGE_ID,
+    session_id: collapsed.at(-1)?.session_id ?? "",
+    role: "assistant",
+    content: projection.streamedText,
+    created_at: projection.startedAt,
+    run_id: projection.runId,
+  };
+  if (collapsed.at(-1)?.role === "assistant") {
+    return [...collapsed.slice(0, -1), liveMessage];
+  }
+  return [...collapsed, liveMessage];
 }
 
 function resolveLiveProjection(
@@ -671,6 +712,16 @@ function MessageSkeleton() {
 
 function isAttachmentOnlyPlaceholder(content: string): boolean {
   return content.trim() === "请结合附件内容回答。";
+}
+
+function isPersistedErrorReply(content: string): boolean {
+  const normalized = content.trim();
+  if (!normalized || normalized.length > 160) {
+    return false;
+  }
+  return /^(model not exist\.?|unknown model error\.?|internal server error\.?|request timed out\.?|rate limit exceeded\.?|error:\s.+)$/i.test(
+    normalized,
+  );
 }
 
 function messageIdentity(message: ConversationMessage): string {

@@ -1,5 +1,5 @@
 import type { ComponentProps, ComponentPropsWithoutRef } from "react";
-import { Streamdown, type Components } from "streamdown";
+import { defaultRemarkPlugins, Streamdown, type Components } from "streamdown";
 
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,20 @@ import { limitedCodeHighlighter } from "./limited-code-highlighter";
 const streamdownComponents = {
   a: SafeLink,
 } as NonNullable<ComponentProps<typeof Streamdown>["components"]>;
+
+type RemarkPluginList = NonNullable<ComponentProps<typeof Streamdown>["remarkPlugins"]>;
+type RemarkPluginItem = RemarkPluginList[number];
+
+const gfmPlugin = Array.isArray(defaultRemarkPlugins.gfm)
+  ? defaultRemarkPlugins.gfm[0]
+  : defaultRemarkPlugins.gfm;
+
+const streamdownRemarkPlugins: RemarkPluginList = [
+  ...(gfmPlugin ? ([[gfmPlugin, { singleTilde: false }]] as unknown as RemarkPluginItem[]) : []),
+  ...Object.entries(defaultRemarkPlugins)
+    .filter(([key]) => key !== "gfm")
+    .map(([, plugin]) => plugin),
+];
 
 interface MessageResponseProps {
   children: string;
@@ -38,6 +52,7 @@ export function MessageResponse({
       mode="streaming"
       parseIncompleteMarkdown={streamLifecycle}
       plugins={{ code: limitedCodeHighlighter }}
+      remarkPlugins={streamdownRemarkPlugins}
       skipHtml
     >
       {children}

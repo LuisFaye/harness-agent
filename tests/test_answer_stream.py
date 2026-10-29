@@ -56,3 +56,18 @@ def test_recovery_repairs_truncated_json_with_trailing_comma():
     blocks, mode = complete_answer_blocks(raw)
     assert mode == "structured"
     assert [item.markdown for item in blocks] == ["第一段"]
+
+
+def test_recovery_extracts_embedded_blocks_after_transition_prefix():
+    raw = (
+        '刚才“小金县”已有结果，其他点位名称需要更完整，我再补查一下。'
+        '{"blocks":[{"markdown":"**结论：最近这几天去川西合适**","source_ids":[]},'
+        '{"markdown":"| 区域 | 10/29 |\\n|---|---|\\n| 甘孜 | 3.5~17.8°C |","source_ids":["src-1"]}]}'
+    )
+    blocks, mode = complete_answer_blocks(raw)
+    assert mode == "structured"
+    assert [item.markdown for item in blocks] == [
+        "**结论：最近这几天去川西合适**",
+        "| 区域 | 10/29 |\n|---|---|\n| 甘孜 | 3.5~17.8°C |",
+    ]
+    assert blocks[1].source_ids == ["src-1"]

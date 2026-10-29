@@ -211,6 +211,48 @@ class MySQLMemoryStore:
             attachment_ids=normalized_attachment_ids,
         )
 
+    def delete_trailing_assistant_messages(
+        self,
+        user_id: str = DEFAULT_USER_ID,
+        session_id: str = DEFAULT_SESSION_ID,
+    ) -> int:
+        """删除当前会话最后一轮用户提问之后的旧 Assistant 回复，用于重试或重新生成时原地覆盖。"""
+        normalized_session_id = normalize_session_id(session_id)
+        if not normalized_session_id:
+            return 0
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT id, role
+                    FROM conversation_messages
+                    WHERE user_id = %s AND session_id = %s
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT 30
+                    """,
+                    (user_id, normalized_session_id),
+                )
+                rows = cursor.fetchall()
+                trailing_ids: list[int] = []
+                for row in rows:
+                    if row["role"] == "assistant":
+                        trailing_ids.append(int(row["id"]))
+                    else:
+                        break
+                if not trailing_ids:
+                    return 0
+                placeholders = ", ".join(["%s"] * len(trailing_ids))
+                cursor.execute(
+                    f"""
+                    DELETE FROM conversation_messages
+                    WHERE user_id = %s AND session_id = %s AND id IN ({placeholders})
+                    """,
+                    (user_id, normalized_session_id, *trailing_ids),
+                )
+                deleted = int(cursor.rowcount or 0)
+            connection.commit()
+        return deleted
+
     def save_conversation_summary(
         self,
         user_id: str,

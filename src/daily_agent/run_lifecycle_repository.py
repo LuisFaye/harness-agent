@@ -105,6 +105,33 @@ class MySQLRunLifecycleRepository:
                                 else None,
                             ),
                         )
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT id, role
+                            FROM conversation_messages
+                            WHERE user_id = %s AND session_id = %s
+                            ORDER BY created_at DESC, id DESC
+                            LIMIT 30
+                            """,
+                            (user_id, normalized_session_id),
+                        )
+                        recent_rows = cursor.fetchall() or []
+                        trailing_assistant_ids: list[int] = []
+                        for row in recent_rows:
+                            if row.get("role") == "assistant":
+                                trailing_assistant_ids.append(int(row["id"]))
+                            else:
+                                break
+                        if trailing_assistant_ids:
+                            placeholders = ", ".join(["%s"] * len(trailing_assistant_ids))
+                            cursor.execute(
+                                f"""
+                                DELETE FROM conversation_messages
+                                WHERE user_id = %s AND session_id = %s AND id IN ({placeholders})
+                                """,
+                                (user_id, normalized_session_id, *trailing_assistant_ids),
+                            )
                 connection.commit()
         except DailyAgentError:
             raise

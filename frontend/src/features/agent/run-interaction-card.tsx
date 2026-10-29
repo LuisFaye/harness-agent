@@ -96,22 +96,25 @@ export function RunInteractionCard({
 
   if (errorMessage || projection?.status === "failed") {
     return (
-      <section className="m-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 sm:mx-6" role="alert">
-        <div className="flex items-start gap-3">
-          <AlertTriangle aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />
-          <div className="min-w-0 flex-1">
-            <h2 className="font-semibold">本次运行没有完成</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+      <section
+        className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2.5"
+        role="alert"
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <AlertTriangle aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+          <div className="min-w-0 flex-1 text-xs">
+            <span className="font-medium text-foreground">本次运行没有完成：</span>
+            <span className="text-muted-foreground">
               {errorMessage || projection?.error?.message || "请稍后重试。"}
-            </p>
+            </span>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button disabled={busy} onClick={onRetry} variant="outline">
-            <RotateCcw aria-hidden="true" />
+        <div className="flex shrink-0 items-center gap-1.5">
+          <Button disabled={busy} onClick={onRetry} size="sm" variant="outline">
+            <RotateCcw aria-hidden="true" className="size-3.5" />
             重试
           </Button>
-          <Button onClick={onDismissError} variant="ghost">关闭提示</Button>
+          <Button onClick={onDismissError} size="sm" variant="ghost">关闭提示</Button>
         </div>
       </section>
     );
@@ -119,8 +122,8 @@ export function RunInteractionCard({
 
   if (projection?.status === "cancel_requested" || projection?.status === "cancelled") {
     return (
-      <p className="m-4 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground sm:mx-6" role="status">
-        <CircleStop aria-hidden="true" className="size-4" />
+      <p className="mt-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground" role="status">
+        <CircleStop aria-hidden="true" className="size-3.5" />
         {projection.status === "cancelled" ? "任务已取消。" : "停止请求已提交，正在等待当前步骤安全结束。"}
       </p>
     );

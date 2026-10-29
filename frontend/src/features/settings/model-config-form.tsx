@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { KeyRound, List, LoaderCircle, RotateCcw, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { listAvailableModels, type ModelConfigWritePayload } from "@/lib/api/management";
@@ -9,21 +9,27 @@ import type { ModelConfigResponse } from "@/lib/api/management-schemas";
 interface ModelConfigFormProps {
   config: ModelConfigResponse;
   pending: boolean;
-  onSave: (payload: ModelConfigWritePayload) => void;
+  onSave: (payload: ModelConfigWritePayload) => Promise<ModelConfigResponse>;
 }
 
-const inputClass = "mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/20";
+const inputClass = "mt-1.5 h-10 w-full rounded-xl border border-border/85 bg-background px-3.5 text-sm shadow-2xs outline-none transition-colors focus:border-primary/45 focus:ring-3 focus:ring-ring/20";
 
 export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProps) {
-  const [provider, setProvider] = useState<"openai_compatible" | "dashscope">("openai_compatible");
-  const [modelId, setModelId] = useState("");
-  const [baseUrl, setBaseUrl] = useState("");
+  const [provider, setProvider] = useState<"openai_compatible" | "dashscope">(config.config.provider === "dashscope" ? "dashscope" : "openai_compatible");
+  const [modelId, setModelId] = useState(config.config.model_id);
+  const [baseUrl, setBaseUrl] = useState(config.config.base_url);
   const [apiKey, setApiKey] = useState("");
   const [clearApiKey, setClearApiKey] = useState(false);
-  const [telemetry, setTelemetry] = useState(false);
-  const [thinking, setThinking] = useState(true);
-  const [reasoningEffort, setReasoningEffort] = useState<"high" | "max">("high");
-  const [contextBudget, setContextBudget] = useState(1_000_000);
+  const [telemetry, setTelemetry] = useState(config.config.agno_telemetry);
+  const [thinking, setThinking] = useState(config.config.thinking_enabled);
+  const [reasoningEffort, setReasoningEffort] = useState<"high" | "max">(config.config.reasoning_effort === "max" ? "max" : "high");
+  const [contextBudget, setContextBudget] = useState(config.config.context_token_budget);
+  const dirtyRef = useRef(false);
+  const dirty = provider !== config.config.provider || modelId !== config.config.model_id
+    || baseUrl !== config.config.base_url || Boolean(apiKey) || clearApiKey
+    || telemetry !== config.config.agno_telemetry || thinking !== config.config.thinking_enabled
+    || reasoningEffort !== config.config.reasoning_effort
+    || contextBudget !== config.config.context_token_budget;
   const [availableModels, setAvailableModels] = useState<string[]>([]);
   const fetchModelsMutation = useMutation({ mutationFn: listAvailableModels });
 
@@ -49,7 +55,7 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
     };
   }
 
-  function syncFromConfig() {
+  function syncFromConfig(config: ModelConfigResponse) {
     setProvider(config.config.provider === "dashscope" ? "dashscope" : "openai_compatible");
     setModelId(config.config.model_id);
     setBaseUrl(config.config.base_url);
@@ -62,20 +68,46 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
   }
 
   function resetAll() {
-    syncFromConfig();
+    syncFromConfig(config);
+    dirtyRef.current = false;
     setAvailableModels([]);
     fetchModelsMutation.reset();
   }
 
-  useEffect(syncFromConfig, [config]);
+  useEffect(() => {
+    // 后台刷新只更新干净表单，不能覆盖用户尚未保存的输入。
+    if (!dirtyRef.current) syncFromConfig(config);
+  }, [config]);
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    dirtyRef.current = dirty;
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const preventLoss = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventLoss);
+    return () => window.removeEventListener("beforeunload", preventLoss);
+  }, [dirty]);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave(buildPayload());
+    if (pending) return;
+    try {
+      const saved = await onSave(buildPayload());
+      syncFromConfig(saved);
+      dirtyRef.current = false;
+    } catch {
+      // 保存错误由页面统一展示，保留原表单以便修正后重试。
+    }
   }
 
   function fetchModels() {
-    fetchModelsMutation.mutate(undefined, {
+    // 使用表单当前填写的地址/Key（未保存也可），留空的 Key 由后端沿用已保存值。
+    fetchModelsMutation.mutate({ provider, base_url: baseUrl.trim(), api_key: apiKey.trim() }, {
       onSuccess: (payload) => {
         if (payload.status === "ok") {
           setAvailableModels(payload.models);
@@ -84,21 +116,19 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
     });
   }
 
-  function switchModel(nextModelId: string) {
-    setModelId(nextModelId);
-    if (nextModelId !== config.config.model_id) {
-      onSave(buildPayload(nextModelId));
-    }
-  }
-
   return (
-    <form className="rounded-xl border bg-card p-5 sm:p-6" onSubmit={submit}>
+    <form className="rounded-2xl border border-border/85 bg-card p-5 shadow-2xs sm:p-6" onSubmit={submit}>
       <header>
         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Model</p>
-        <h2 className="mt-1 font-semibold">模型配置</h2>
+        <h2 className="mt-1 font-semibold tracking-tight">模型配置</h2>
         <p className="mt-1 text-sm text-muted-foreground">保存后写入本地配置；环境变量仍具有更高优先级。</p>
       </header>
 
+      <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground" role="status">
+        <span className={`size-1.5 rounded-full ${dirty ? "bg-warning" : "bg-success"}`} />
+        {dirty ? "有未保存的修改，点击保存配置后生效。" : "当前配置已保存。"}
+      </p>
+      <fieldset disabled={pending}>
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <label className="text-sm font-medium">
           Provider
@@ -108,12 +138,13 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
           </select>
         </label>
         <div className="text-sm font-medium sm:col-span-2">
-          <span>模型</span>
+          <label htmlFor="model-selection">模型</label>
           <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
             <select
               className={`${inputClass} mt-0 min-w-0 flex-1`}
               disabled={pending || fetchModelsMutation.isPending}
-              onChange={(event) => switchModel(event.target.value)}
+              id="model-selection"
+              onChange={(event) => setModelId(event.target.value)}
               value={modelId}
             >
               {modelOptions.length
@@ -130,14 +161,14 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
               {fetchModelsMutation.isPending
                 ? <LoaderCircle aria-hidden="true" className="animate-spin" />
                 : <List aria-hidden="true" />}
-              获取模型
+              获取模型列表
             </Button>
           </div>
           {fetchModelsMutation.data?.status === "ok" ? (
             <span className="mt-1 block text-xs text-muted-foreground">
               已获取 {fetchModelsMutation.data.models.length} 个模型
               {fetchModelsMutation.data.duration_ms !== undefined ? `（${fetchModelsMutation.data.duration_ms} ms）` : ""}
-              ，可直接在下拉中切换。
+              ，选择后需点击保存配置。
             </span>
           ) : null}
           {fetchModelsMutation.data?.status === "error" ? (
@@ -185,9 +216,10 @@ export function ModelConfigForm({ config, pending, onSave }: ModelConfigFormProp
       </fieldset>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        <Button disabled={pending} type="submit"><Save aria-hidden="true" />{pending ? "正在保存" : "保存配置"}</Button>
+        <Button disabled={pending || !dirty} type="submit"><Save aria-hidden="true" />{pending ? "正在保存" : "保存配置"}</Button>
         <Button disabled={pending} onClick={resetAll} type="button" variant="outline"><RotateCcw aria-hidden="true" />恢复已保存值</Button>
       </div>
+      </fieldset>
     </form>
   );
 }

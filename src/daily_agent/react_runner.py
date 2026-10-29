@@ -779,6 +779,11 @@ class AgentLoopRunner:
                 continue
             if event_type == "tool_call_started":
                 finish_reasoning()
+                if not agent_answer_blocks:
+                    # 工具调用前的模型过渡语不属于最终回答，清空缓冲避免与终态 JSON 拼接。
+                    content_parts.clear()
+                    if structured_answer:
+                        answer_parser = AgentAnswerStreamParser()
                 evaluate_pending("continue", "上一轮结果不足，模型决定继续调用工具")
                 tool = getattr(event, "tool", None)
                 tool_name = _tool_name(tool)
@@ -881,8 +886,9 @@ class AgentLoopRunner:
                     reasoning_segment_parts.append(reasoning_chunk)
                     update_reasoning_progress()
                 chunk = getattr(event, "content", None)
-                if isinstance(chunk, str):
-                    finish_reasoning()
+                if isinstance(chunk, str) and chunk:
+                    if chunk.strip() or content_parts:
+                        finish_reasoning()
                     content_parts.append(chunk)
                     if answer_parser is not None:
                         completed_blocks = answer_parser.feed(chunk)
@@ -916,7 +922,7 @@ class AgentLoopRunner:
                     if not reasoning_segment_parts:
                         reasoning_parts.append(content)
                         reasoning_segment_parts.append(content)
-                start_reasoning()
+                    start_reasoning()
                 finish_reasoning()
                 continue
             if event_type == "run_completed":

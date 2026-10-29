@@ -157,6 +157,74 @@ def test_react_runner_emits_deepseek_reasoning_progress_before_answer():
     assert events[1][1]["content"] == "先分析用户目标。"
 
 
+def test_react_runner_keeps_single_reasoning_segment_when_run_content_has_empty_content():
+    class TokenReasoningAgent:
+        output_schema = object()
+
+        def run(self, *args, **kwargs):
+            return iter(
+                [
+                    _Event("RunContent", "", reasoning_content="第一句思考，"),
+                    _Event("RunContent", "", reasoning_content="第二句思考，"),
+                    _Event("RunContent", "", reasoning_content="第三句思考。"),
+                    _Event("RunContent", '{"blocks":[{"markdown":"最终结论","source_ids":[]}]}'),
+                    _Event("RunCompleted", '{"blocks":[{"markdown":"最终结论","source_ids":[]}]}'),
+                ]
+            )
+
+    events = []
+    result = AgentLoopRunner(agent_factory=lambda **kwargs: TokenReasoningAgent()).run(
+        "复杂问题",
+        progress_callback=lambda name, payload: events.append((name, payload)),
+    )
+
+    started = [payload for name, payload in events if name == "reasoning_started"]
+    completed = [payload for name, payload in events if name == "reasoning_completed"]
+    assert len(started) == 1
+    assert len(completed) == 1
+    assert started[0]["segment"] == 1
+    assert completed[0]["segment"] == 1
+    assert completed[0]["content"] == "第一句思考，第二句思考，第三句思考。"
+    assert result.response_text == "最终结论"
+
+
+def test_react_runner_discards_pre_tool_chatter_and_parses_structured_blocks():
+    class Tool:
+        tool_call_id = "tool-weather"
+        tool_name = "weather_lookup"
+        tool_args = {"city": "甘孜"}
+        result = "甘孜 3.5~17.8°C"
+        tool_call_error = None
+
+    class MultiStepStructuredAgent:
+        output_schema = object()
+
+        def run(self, *args, **kwargs):
+            tool = Tool()
+            final_json = (
+                '{"blocks":[{"markdown":"### 未来一周关键点位天气","source_ids":[]},'
+                '{"markdown":"| 区域 | 温度 |\\n|---|---|\\n| 甘孜 | 3.5~17.8°C |","source_ids":[]}]}'
+            )
+            return iter(
+                [
+                    _Event("RunContent", "刚才已有部分结果，我再补查一下。"),
+                    _Event("ToolCallStarted", tool=tool),
+                    _Event("ToolCallCompleted", tool=tool),
+                    _Event("RunContent", final_json),
+                    _Event("RunCompleted", f"刚才已有部分结果，我再补查一下。{final_json}"),
+                ]
+            )
+
+    result = AgentLoopRunner(agent_factory=lambda **kwargs: MultiStepStructuredAgent()).run("去川西天气怎么样")
+
+    assert result.status == "success"
+    assert "blocks" not in result.response_text
+    assert "我再补查一下" not in result.response_text
+    assert "### 未来一周关键点位天气" in result.response_text
+    assert "| 区域 | 温度 |\n|---|---|\n| 甘孜 | 3.5~17.8°C |" in result.response_text
+
+
+
 def test_agent_loop_emits_tool_start_and_finish_progress():
     class Tool:
         tool_call_id = "tool-1"

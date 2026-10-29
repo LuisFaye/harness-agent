@@ -193,25 +193,25 @@ export function SlashSkillMenu({
   return (
     <div
       aria-label="可选技能"
-      className="absolute inset-x-0 bottom-full z-20 mb-1 max-h-40 overflow-y-auto rounded-lg border border-border bg-popover shadow-md"
+      className="absolute inset-x-0 bottom-full z-20 mb-2 max-h-48 overflow-y-auto rounded-2xl border border-border bg-popover/98 p-1.5 shadow-xl backdrop-blur-md"
       role="listbox"
     >
       {isLoading ? (
-        <div className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground" role="status">
-          <LoaderCircle aria-hidden="true" className="size-3 animate-spin" />
+        <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground" role="status">
+          <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin text-primary" />
           正在读取技能
         </div>
       ) : null}
       {!isLoading && !items.length ? (
-        <p className="px-2 py-1.5 text-xs text-muted-foreground">没有匹配的技能</p>
+        <p className="px-3 py-2 text-xs text-muted-foreground">没有匹配的技能</p>
       ) : null}
       {!isLoading ? items.map((item, index) => (
         <button
           aria-selected={index === highlightedIndex}
           className={cn(
-            "flex w-full items-center gap-2 px-2 py-1 text-left",
+            "flex w-full items-center justify-between gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            index === highlightedIndex ? "bg-primary-soft" : "hover:bg-muted",
+            index === highlightedIndex ? "bg-primary-soft text-accent-foreground" : "hover:bg-muted/75",
           )}
           key={item.name}
           onClick={() => onSelect(item.insertText)}
@@ -220,8 +220,15 @@ export function SlashSkillMenu({
           title={item.description || undefined}
           type="button"
         >
-          <span className="min-w-0 flex-1 truncate text-xs font-medium">{item.name}</span>
-          <span className="shrink-0 truncate font-mono text-[11px] text-muted-foreground">{item.label}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-semibold text-foreground">{item.name}</span>
+            {item.description ? (
+              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{item.description}</span>
+            ) : null}
+          </span>
+          <span className="shrink-0 truncate rounded-md border border-primary/15 bg-card px-2 py-0.5 font-mono text-[11px] font-medium text-primary shadow-2xs">
+            {item.label}
+          </span>
         </button>
       )) : null}
     </div>

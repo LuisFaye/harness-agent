@@ -85,8 +85,8 @@ export function RunsPage() {
       aria-labelledby="runs-page-title"
       className="flex h-full min-h-0 flex-col p-4 sm:p-6"
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-card">
-        <div className="shrink-0 border-b px-5 py-5">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border/85 bg-card shadow-xs">
+        <div className="shrink-0 border-b border-border/75 px-5 py-5">
           <PageHeader title="运行监控" description="查看运行状态、任务结果和执行过程。" icon={Activity} id="runs-page-title">
           <Button disabled={workspace.listFetching} onClick={() => void workspace.refresh()} variant="outline">
             <RefreshCw aria-hidden="true" className={workspace.listFetching ? "animate-spin" : ""} />

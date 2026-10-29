@@ -80,7 +80,7 @@ export function AgentSessionActions({
         const role = message.role === "user"
           ? "用户"
           : message.role === "assistant"
-            ? "SB Agent"
+            ? "Harness Agent"
             : "系统";
         lines.push(`## ${role}`, "", message.content, "");
       }
@@ -101,43 +101,45 @@ export function AgentSessionActions({
       <div className="flex items-center gap-1">
         <Button
           aria-label={isFavorite ? "取消本地收藏" : "添加到本地收藏"}
-          className={cn(isFavorite && "bg-primary-soft text-primary")}
+          className={cn(isFavorite ? "bg-primary-soft text-primary" : "text-muted-foreground")}
           disabled={!hasMessages}
           onClick={toggleFavorite}
-          size="icon"
+          size="icon-sm"
           variant="ghost"
         >
           <Star
             aria-hidden="true"
-            className={cn("size-5", isFavorite && "fill-current")}
+            className={cn("size-4", isFavorite && "fill-current")}
           />
         </Button>
         <Button
           aria-expanded={shareOpen}
           aria-label="分享会话给成员"
+          className="text-muted-foreground"
           disabled={!hasMessages}
           onClick={() => setShareOpen((current) => !current)}
-          size="icon"
+          size="icon-sm"
           variant="ghost"
         >
-          <Share2 aria-hidden="true" />
+          <Share2 aria-hidden="true" className="size-4" />
         </Button>
         <Button
           aria-label="导出会话 Markdown"
+          className="text-muted-foreground"
           disabled={!hasMessages}
           onClick={exportSessionMarkdown}
-          size="icon"
+          size="icon-sm"
           variant="ghost"
         >
-          <Download aria-hidden="true" />
+          <Download aria-hidden="true" className="size-4" />
         </Button>
       </div>
       {shareOpen ? (
-        <form className="absolute top-full right-0 z-30 mt-2 w-72 rounded-xl border bg-background p-3 shadow-lg" onSubmit={shareSession}>
-          <label className="text-xs font-medium" htmlFor="share-recipient-email">接收成员邮箱</label>
+        <form className="absolute top-full right-0 z-30 mt-2 w-76 rounded-2xl border border-border bg-popover p-4 shadow-xl" onSubmit={shareSession}>
+          <label className="text-xs font-semibold text-foreground" htmlFor="share-recipient-email">接收成员邮箱</label>
           <input
             autoFocus
-            className="mt-2 h-10 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:border-ring focus:ring-2 focus:ring-ring/25"
             id="share-recipient-email"
             onChange={(event) => setRecipientEmail(event.target.value)}
             placeholder="friend@example.com"
@@ -145,14 +147,14 @@ export function AgentSessionActions({
             type="email"
             value={recipientEmail}
           />
-          <p className="mt-2 text-xs text-muted-foreground">对方只能查看消息和产物；继续对话时会复制到自己的空间。</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">对方只能查看消息和产物；继续对话时会复制到自己的空间。</p>
           <Button className="mt-3 w-full" disabled={sharing} size="sm" type="submit">确认只读分享</Button>
         </form>
       ) : null}
       <p
         aria-live="polite"
         className={cn(
-          "absolute top-full right-0 z-20 mt-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs shadow-sm whitespace-nowrap",
+          "absolute top-full right-0 z-20 mt-1.5 rounded-xl border bg-popover px-3 py-1.5 text-xs shadow-md whitespace-nowrap transition-opacity",
           notice?.tone === "error"
             ? "border-destructive/30 text-destructive"
             : notice

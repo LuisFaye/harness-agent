@@ -200,11 +200,11 @@ function RunDetailContent({
             )}
           </div>
           <Link
-            className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-primary hover:underline"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
             to={`/agent/${encodeURIComponent(detail.session_id)}`}
           >
             打开所属会话
-            <ExternalLink aria-hidden="true" className="size-4" />
+            <ExternalLink aria-hidden="true" className="size-3.5" />
           </Link>
         </section>
 
@@ -225,9 +225,9 @@ function RunDetailContent({
 
 function OverviewItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border bg-muted/30 p-3">
-      <span className="block text-xs text-muted-foreground">{label}</span>
-      <strong className="mt-1 block truncate text-sm font-medium" title={value}>{value}</strong>
+    <div className="min-w-0 rounded-xl border border-border/75 bg-muted/25 p-3 shadow-2xs">
+      <span className="block text-[11px] font-medium text-muted-foreground">{label}</span>
+      <strong className="mt-1 block truncate font-mono text-xs font-semibold text-foreground" title={value}>{value}</strong>
     </div>
   );
 }

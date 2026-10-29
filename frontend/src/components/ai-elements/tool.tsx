@@ -30,7 +30,7 @@ export function Tool({
   return (
     <Collapsible.Root
       className={cn(
-        "group/tool overflow-hidden rounded-lg border bg-card text-card-foreground",
+        "group/tool overflow-hidden rounded-xl border border-border/70 bg-card text-card-foreground",
         className,
       )}
       {...props}
@@ -90,7 +90,7 @@ export function ToolHeader({
         </span>
       </span>
       <span className={cn(
-        "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium",
+        "shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
         kind === "MCP" && "bg-primary-soft text-accent-foreground",
         kind === "Skill" && "bg-secondary text-secondary-foreground",
         kind === "Sub-Agent" && "bg-warning/10 text-warning",

@@ -104,7 +104,7 @@ export function toNarrativeViewModel(
 ): NarrativeViewModel {
   const iteration = item.details?.iteration;
   return {
-    isStreaming: false,
+    isStreaming: runActive && item.status === "running",
     key: item.key || `iteration-${String(iteration ?? "step")}`,
     text: narrativeFromIteration(item),
   };

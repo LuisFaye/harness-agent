@@ -108,13 +108,18 @@ export async function recoverAgentRun(
       throw new DOMException("请求已取消。", "AbortError");
     }
     const page = await fetchEventPage(userId, runId, projection.lastSequence);
-    projection = applyEvents(projection, page.events, options.onProjection, applyStoredRunEvent);
+    if (options.signal?.aborted) {
+      throw new DOMException("请求已取消。", "AbortError");
+    }
+    projection = applyEvents(projection, page.events, undefined, applyStoredRunEvent);
     if (isTerminalProjection(projection)) {
+      options.onProjection?.(projection);
       return projection;
     }
     if (page.has_more) {
       continue;
     }
+    options.onProjection?.(projection);
     await wait(500);
   }
   throw new Error("连接已断开，暂时无法自动恢复。请到运行监控查看后台状态。");

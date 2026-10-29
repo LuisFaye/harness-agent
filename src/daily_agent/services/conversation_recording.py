@@ -34,6 +34,10 @@ def record_conversation_safely(
         # API 请求在创建运行时已经原子写入用户消息，结束阶段只补 Assistant，避免同一 run 重复。
         # CLI 等未经过运行仓储的入口继续使用完整轮次写入，保持原有调用兼容性。
         if suppress_user_message or user_message_persisted:
+            if suppress_user_message:
+                delete_trailing = getattr(store, "delete_trailing_assistant_messages", None)
+                if callable(delete_trailing):
+                    delete_trailing(user_id=user_id, session_id=session_id)
             store.add_conversation_message(
                 session_id=session_id,
                 role="assistant",

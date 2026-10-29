@@ -73,17 +73,17 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
 
   return (
     <div>
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+      <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
         <label className="relative block">
           <span className="sr-only">搜索 Tool 名称或描述</span>
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <input
-            className="min-h-11 w-full rounded-lg border border-border bg-card pr-3 pl-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card pr-3 pl-9.5 text-sm text-foreground shadow-2xs outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setKeyword(event.target.value))}
-            placeholder="搜索名称或描述"
+            placeholder="搜索名称或描述…"
             type="search"
             value={keyword}
           />
@@ -92,7 +92,7 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
           <span className="sr-only">按可用状态筛选</span>
           <select
             aria-label="按可用状态筛选"
-            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-2xs outline-none transition-all focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setAvailability(event.target.value))}
             value={availability}
           >
@@ -106,7 +106,7 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
           <span className="sr-only">按来源类型筛选</span>
           <select
             aria-label="按来源类型筛选"
-            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-2xs outline-none transition-all focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setSourceType(event.target.value))}
             value={sourceType}
           >
@@ -116,7 +116,7 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
         </label>
       </div>
 
-      <p aria-live="polite" className="mt-3 text-xs text-muted-foreground">
+      <p aria-live="polite" className="mt-3 text-xs font-medium text-muted-foreground">
         共 {filtered.length} 个 Tool
         {filtered.length !== items.length ? `（已筛选，共 ${items.length} 个）` : ""}
       </p>
@@ -125,43 +125,43 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
         <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visibleItems.map((item) => (
             <article
-              className="flex h-full min-w-0 flex-col rounded-xl border border-border/80 bg-card p-4 transition-[border-color,box-shadow] duration-200 hover:border-primary/35 hover:shadow-sm hover:shadow-primary/5"
+              className="flex h-full min-w-0 flex-col rounded-2xl border border-border/85 bg-card p-4.5 shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
               key={item.tool_id}
             >
               <header className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
                   className={[
-                    "grid size-10 shrink-0 place-items-center rounded-lg border",
+                    "grid size-10.5 shrink-0 place-items-center rounded-xl border shadow-2xs",
                     sourceIconTone(item.source_type),
                   ].join(" ")}
                 >
                   <SourceIcon sourceType={item.source_type} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold" title={item.name}>{item.name}</h2>
-                  <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                  <h2 className="truncate text-[15px] font-semibold tracking-tight text-foreground" title={item.name}>{item.name}</h2>
+                  <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-muted-foreground">
                     {compactCapabilityText(item.description || "暂无说明")}
                   </p>
                 </div>
                 <AvailabilityBadge available={item.available} enabled={item.enabled} />
               </header>
-              <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-                <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-muted-foreground">
+              <div className="mt-3.5 flex flex-wrap gap-1.5 text-xs">
+                <span className="rounded-lg border border-border/75 bg-muted/55 px-2 py-0.5 font-medium text-secondary-foreground">
                   {item.source_type} · {item.source_id}
                 </span>
-                <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-muted-foreground">
+                <span className="rounded-lg border border-border/75 bg-muted/55 px-2 py-0.5 font-medium text-secondary-foreground">
                   {riskLabel(item.risk_level)}
                 </span>
                 {item.requires_confirmation ? (
-                  <span className="rounded-full border border-warning/25 bg-warning/10 px-2 py-0.5 text-warning">
+                  <span className="rounded-lg border border-warning/25 bg-warning/10 px-2 py-0.5 font-medium text-warning">
                     执行前确认
                   </span>
                 ) : null}
               </div>
-              <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+              <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/60 pt-3.5">
                 <span
-                  className={`flex min-w-0 items-center gap-1.5 text-xs ${item.available ? "text-success" : "text-warning"}`}
+                  className={`flex min-w-0 items-center gap-1.5 text-xs font-medium ${item.available ? "text-success" : "text-warning"}`}
                 >
                   {item.available
                     ? <CheckCircle2 aria-hidden="true" className="size-3.5 shrink-0" />
@@ -212,7 +212,7 @@ export function ToolsPanel({ items, pendingToolId, onToggle }: ToolsPanelProps) 
               <Button
                 aria-current={number === safePage ? "page" : undefined}
                 aria-label={`第 ${number} 页`}
-                className="min-w-9 px-0"
+                className="min-w-8.5 px-0"
                 key={number}
                 onClick={() => setPage(number)}
                 size="sm"
@@ -280,9 +280,14 @@ function AvailabilityBadge({ enabled, available }: { enabled: boolean; available
     : enabled
       ? "border-warning/25 bg-warning/10 text-warning"
       : "border-border bg-muted text-muted-foreground";
-  return <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>{label}</span>;
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${className}`}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      {label}
+    </span>
+  );
 }
 
 function EmptyPanel({ text }: { text: string }) {
-  return <div className="grid min-h-48 place-items-center rounded-xl border border-dashed bg-card text-sm text-muted-foreground">{text}</div>;
+  return <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed bg-card text-sm text-muted-foreground">{text}</div>;
 }

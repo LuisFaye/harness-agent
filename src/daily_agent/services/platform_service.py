@@ -154,8 +154,15 @@ class ConversationService:
                 "context_observation": None,
             }
         # 数据库读取默认是倒序，这里反转成正序，前端才能像聊天工具一样从上往下渲染。
-        messages = list(
+        # 同一轮提问如果因多次重试产生连续多条 assistant 消息，仅保留该轮最新的一条覆盖展示。
+        raw_messages = list(
             reversed(self.store.list_conversation_messages(user_id=user_id, session_id=session_id, limit=limit)))
+        messages = []
+        for item in raw_messages:
+            if messages and getattr(item, "role", None) == "assistant" and getattr(messages[-1], "role", None) == "assistant":
+                messages[-1] = item
+            else:
+                messages.append(item)
         summary = None
         if self._table_available("conversation_session_summaries"):
             summary = self.store.get_conversation_summary(user_id=user_id, session_id=session_id)
@@ -429,11 +436,31 @@ class ModelConfigService:
         settings = load_settings(paths=self.app_context.paths)
         return self.model_tester.check(settings, force=True).to_dict()
 
-    def list_available_models(self) -> dict[str, object]:
-        """按当前生效配置请求 Provider 模型列表，供设置页下拉切换。"""
+    def list_available_models(
+        self,
+        *,
+        provider: str | None = None,
+        base_url: str | None = None,
+        api_key: str | None = None,
+    ) -> dict[str, object]:
+        """按当前生效配置请求 Provider 模型列表，供设置页下拉切换。
+
+        表单尚未保存时可传入草稿 provider/base_url/api_key；留空的字段沿用已保存配置。
+        """
+        from dataclasses import replace
+
         from daily_agent.model_provider import fetch_available_models
 
         settings = load_settings(paths=self.app_context.paths)
+        overrides: dict[str, str] = {}
+        if provider and provider.strip():
+            overrides["model_provider"] = provider.strip()
+        if base_url and base_url.strip():
+            overrides["model_base_url"] = base_url.strip()
+        if api_key and api_key.strip():
+            overrides["model_api_key"] = api_key.strip()
+        if overrides:
+            settings = replace(settings, **overrides)
         started = time.perf_counter()
         try:
             models = fetch_available_models(settings)

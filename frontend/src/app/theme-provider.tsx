@@ -16,7 +16,7 @@ interface ThemeContextValue {
   setTheme: (theme: Theme) => void;
 }
 
-const THEME_STORAGE_KEY = "sb-agent-theme";
+const THEME_STORAGE_KEY = "harness-agent-theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: PropsWithChildren) {
@@ -56,10 +56,14 @@ export function useTheme(): ThemeContextValue {
 }
 
 function readStoredTheme(): Theme {
-  const value = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return value === "light" || value === "dark" || value === "system"
-    ? value
-    : "system";
+  try {
+    const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return value === "light" || value === "dark" || value === "system"
+      ? value
+      : "light";
+  } catch {
+    return "light";
+  }
 }
 
 function readSystemTheme(): ResolvedTheme {

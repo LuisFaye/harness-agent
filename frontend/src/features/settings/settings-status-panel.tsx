@@ -22,8 +22,8 @@ export function SettingsStatusPanel({ config }: SettingsStatusPanelProps) {
 
   return (
     <aside className="space-y-4">
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="flex items-center gap-2 font-semibold"><CheckCircle2 aria-hidden="true" className="size-4 text-success" />当前生效</h2>
+      <section className="rounded-2xl border border-border/85 bg-card p-5 shadow-2xs">
+        <h2 className="flex items-center gap-2 font-semibold tracking-tight"><CheckCircle2 aria-hidden="true" className="size-4 text-success" />当前生效</h2>
         <dl className="mt-4 grid gap-3 text-sm">
           <Meta label="Provider" value={config.effective.provider} />
           <Meta label="模型 ID" value={config.effective.model_id} />
@@ -34,9 +34,9 @@ export function SettingsStatusPanel({ config }: SettingsStatusPanelProps) {
         </dl>
       </section>
 
-      <section className="rounded-xl border bg-card p-5">
-        <h2 className="flex items-center gap-2 font-semibold"><FileCog aria-hidden="true" className="size-4" />配置来源</h2>
-        <p className="mt-3 break-all rounded-lg bg-muted/60 p-3 font-mono text-xs text-muted-foreground">{config.config_path}</p>
+      <section className="rounded-2xl border border-border/85 bg-card p-5 shadow-2xs">
+        <h2 className="flex items-center gap-2 font-semibold tracking-tight"><FileCog aria-hidden="true" className="size-4 text-primary" />配置来源</h2>
+        <p className="mt-3 break-all rounded-xl border border-border/60 bg-muted/40 p-3 font-mono text-xs text-muted-foreground">{config.config_path}</p>
         <div className="mt-3 text-xs text-muted-foreground">
           {overrides.length
             ? `环境变量正在覆盖：${overrides.map(([key]) => fieldLabels[key] || key).join("、")}`
@@ -44,10 +44,10 @@ export function SettingsStatusPanel({ config }: SettingsStatusPanelProps) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-success/25 bg-success/5 p-5 text-sm">
-        <h2 className="flex items-center gap-2 font-semibold text-success"><ShieldCheck aria-hidden="true" className="size-4" />密钥保护</h2>
+      <section className="rounded-2xl border border-success/20 bg-success/6 p-5 text-sm">
+        <h2 className="flex items-center gap-2 font-semibold tracking-tight text-success"><ShieldCheck aria-hidden="true" className="size-4" />密钥保护</h2>
         <p className="mt-2 text-muted-foreground">页面只读取是否已配置，不显示 Key 内容；保存时留空会保留原值。</p>
-        <span className="mt-3 inline-flex items-center gap-2 text-xs text-success"><KeyRound aria-hidden="true" className="size-3.5" />API 返回值已脱敏</span>
+        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success"><KeyRound aria-hidden="true" className="size-3.5" />API 返回值已脱敏</span>
       </section>
     </aside>
   );
@@ -55,9 +55,9 @@ export function SettingsStatusPanel({ config }: SettingsStatusPanelProps) {
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[6rem_1fr] gap-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-all font-medium">{value}</dd>
+    <div className="grid grid-cols-[6rem_1fr] gap-3 border-b border-border/40 pb-2.5 last:border-b-0 last:pb-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 break-all text-xs font-medium">{value}</dd>
     </div>
   );
 }

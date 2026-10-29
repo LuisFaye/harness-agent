@@ -12,7 +12,7 @@ export function MessageArtifacts({ artifacts }: MessageArtifactsProps) {
   }
   return (
     <section aria-label="本轮产物" className="mt-3">
-      <ul className="grid gap-2">
+      <ul className="artifact-grid grid gap-3">
         {artifacts.map((item) => (
           <ArtifactCard artifact={item} key={item.artifact_id} />
         ))}

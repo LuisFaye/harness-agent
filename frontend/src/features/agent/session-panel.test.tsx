@@ -32,6 +32,8 @@ describe("会话侧栏", () => {
     const onKeywordChange = vi.fn();
     renderPanel({ onKeywordChange });
 
+    expect(screen.queryByRole("searchbox", { name: "搜索会话" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "搜索会话" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "搜索会话" }), {
       target: { value: " 项目 " },
     });

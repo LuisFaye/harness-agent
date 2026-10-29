@@ -61,7 +61,7 @@ export function LoginPage() {
     }
   };
   return (
-    <AuthLayout description="使用受邀注册的邮箱进入你的私人办公空间" title="登录 SB Agent">
+    <AuthLayout description="使用受邀注册的邮箱进入你的智能协同空间" title="登录 Harness Agent">
       <form className="space-y-4" onSubmit={submit}>
         <AuthField autoComplete="email" icon={Mail} label="邮箱" onChange={setEmail} type="email" value={email} />
         <AuthField autoComplete="current-password" icon={LockKeyhole} label="密码" onChange={setPassword} type="password" value={password} />
@@ -140,7 +140,7 @@ export function RegisterPage() {
     }
   };
   return (
-    <AuthLayout description="填写管理员提供的邀请码，注册后立即进入自己的独立工作空间。" title="注册 SB Agent">
+    <AuthLayout description="填写管理员提供的邀请码，注册后立即进入自己的独立工作空间。" title="注册 Harness Agent">
       <form className="space-y-4" onSubmit={submit}>
         <AuthField autoComplete="one-time-code" icon={KeyRound} label="邀请码" onChange={setCode} value={code} />
         <AuthField autoComplete="name" icon={UserRoundPlus} label="显示名称" onChange={setDisplayName} value={displayName} />
@@ -161,13 +161,13 @@ export function RegisterPage() {
 
 function AuthLayout({ children, description, title }: { children: React.ReactNode; description: string; title: string }) {
   return (
-    <main className="auth-layout grid min-h-svh place-items-center bg-muted/30 px-4 py-10">
-      <section className="w-full max-w-md rounded-2xl border bg-background p-6 shadow-xl shadow-black/5 sm:p-8">
-        <div className="mb-7 flex items-center gap-3">
-          <AgentMark className="size-11" />
+    <main className="auth-layout grid min-h-svh place-items-center px-4 py-10">
+      <section className="liquid-glass w-full max-w-md rounded-3xl p-6 sm:p-8">
+        <div className="mb-7 flex items-center gap-3.5">
+          <AgentMark className="size-10" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           </div>
         </div>
         {children}
@@ -189,11 +189,11 @@ function AuthField({ autoComplete, help, icon: Icon, label, minLength, onChange,
   return (
     <label className="block space-y-1.5 text-sm font-medium">
       <span>{label}{help ? <span className="ml-2 font-normal text-muted-foreground">{help}</span> : null}</span>
-      <span className="flex items-center rounded-lg border bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+      <span className="flex items-center rounded-xl border border-border/85 bg-background px-3.5 shadow-2xs transition-colors focus-within:border-primary/45 focus-within:ring-3 focus-within:ring-ring/20">
         <Icon aria-hidden="true" className="size-4 text-muted-foreground" />
         <input
           autoComplete={autoComplete}
-          className="h-11 w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+          className="h-10.5 w-full bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
           minLength={minLength}
           onChange={(event) => onChange(event.target.value)}
           required
@@ -206,7 +206,7 @@ function AuthField({ autoComplete, help, icon: Icon, label, minLength, onChange,
 }
 
 function AuthError({ message }: { message: string }) {
-  return message ? <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">{message}</p> : null;
+  return message ? <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive" role="alert">{message}</p> : null;
 }
 
 function AuthLoading() {

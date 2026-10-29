@@ -82,10 +82,12 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
 
   return (
     <div className="space-y-4">
-      <details className="group rounded-xl border border-border/80 bg-card">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="flex items-center gap-2">
-            <Upload aria-hidden="true" className="size-4 text-primary" />
+      <details className="group rounded-2xl border border-border/85 bg-card shadow-2xs">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-2.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="flex items-center gap-2.5">
+            <span className="grid size-7 place-items-center rounded-lg bg-primary-soft text-primary">
+              <Upload aria-hidden="true" className="size-3.5" />
+            </span>
             导入 Skill
           </span>
           <ChevronDown
@@ -93,12 +95,12 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
             className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
           />
         </summary>
-        <form className="border-t border-border/80 px-4 py-4" onSubmit={submitImport}>
+        <form className="border-t border-border/75 px-4 py-4" onSubmit={submitImport}>
           <label className="text-sm font-medium" htmlFor="skill-import-path">
             Skill 路径
           </label>
           <input
-            className="mt-2 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground shadow-2xs outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             id="skill-import-path"
             onChange={(event) => setPath(event.target.value)}
             placeholder="本地路径、GitHub 或 skills.sh"
@@ -114,17 +116,17 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
         </form>
       </details>
 
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+      <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
         <label className="relative block">
           <span className="sr-only">搜索 Skill 名称、说明或能力</span>
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground"
           />
           <input
-            className="min-h-11 w-full rounded-lg border border-border bg-card pr-3 pl-9 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card pr-3 pl-9.5 text-sm text-foreground shadow-2xs outline-none transition-all placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setKeyword(event.target.value))}
-            placeholder="搜索名称、说明或能力"
+            placeholder="搜索名称、说明或能力…"
             type="search"
             value={keyword}
           />
@@ -133,7 +135,7 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
           <span className="sr-only">按状态筛选 Skill</span>
           <select
             aria-label="按状态筛选"
-            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-2xs outline-none transition-all focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setStatus(event.target.value as StatusFilter))}
             value={status}
           >
@@ -147,7 +149,7 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
           <span className="sr-only">按来源筛选 Skill</span>
           <select
             aria-label="按来源筛选"
-            className="min-h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            className="min-h-10.5 w-full rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-2xs outline-none transition-all focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
             onChange={(event) => changeFilter(() => setSource(event.target.value))}
             value={source}
           >
@@ -157,13 +159,13 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
         </label>
       </div>
 
-      <p aria-live="polite" className="text-xs text-muted-foreground">
+      <p aria-live="polite" className="text-xs font-medium text-muted-foreground">
         共 {filtered.length} 个 Skill
         {filtered.length !== items.length ? `（已筛选，共 ${items.length} 个）` : ""}
       </p>
 
       {items.length === 0 ? (
-        <div className="grid min-h-56 place-items-center rounded-xl border border-dashed bg-card text-center">
+        <div className="grid min-h-56 place-items-center rounded-2xl border border-dashed bg-card text-center">
           <div>
             <Sparkles aria-hidden="true" className="mx-auto size-7 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">当前没有 Skill。</p>
@@ -173,40 +175,45 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
           </div>
         </div>
       ) : visibleItems.length ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visibleItems.map((item) => (
             <button
-              className="group flex h-full min-h-44 flex-col rounded-xl border border-border/80 bg-card p-4 text-left transition-[border-color,background-color] duration-200 hover:border-primary/50 hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+              className="group flex h-full min-h-44 flex-col rounded-2xl border border-border/85 bg-card p-4.5 text-left shadow-2xs transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
               key={item.name}
               onClick={() => onSelect(item)}
               type="button"
             >
               <div className="flex w-full items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">
-                    Skill
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary-soft text-primary shadow-2xs">
+                    <Sparkles aria-hidden="true" className="size-4.5" />
                   </span>
-                  <h2 className="mt-1 truncate font-semibold" title={item.name}>
-                    {item.name}
-                  </h2>
+                  <div className="min-w-0">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary">
+                      Skill
+                    </span>
+                    <h2 className="mt-0.5 truncate text-[15px] font-semibold tracking-tight text-foreground" title={item.name}>
+                      {item.name}
+                    </h2>
+                  </div>
                 </div>
                 <SkillStatusBadge callable={item.callable_by_agent} enabled={item.enabled} />
               </div>
-              <p className="mt-3 text-sm text-muted-foreground">
+              <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">
                 {compactCapabilityText(item.description || "暂无说明", 130)}
               </p>
-              <div className="mt-auto flex flex-wrap gap-1.5 pt-4 text-xs text-muted-foreground">
-                <span className="rounded-md bg-muted px-2 py-1">{item.source}</span>
-                <span className="rounded-md bg-muted px-2 py-1">
+              <div className="mt-auto flex flex-wrap gap-1.5 border-t border-border/60 pt-3.5 text-xs text-muted-foreground">
+                <span className="rounded-lg border border-border/75 bg-muted/55 px-2 py-0.5 font-medium text-secondary-foreground">{item.source}</span>
+                <span className="rounded-lg border border-border/75 bg-muted/55 px-2 py-0.5 font-medium text-secondary-foreground">
                   {compatibilityLabel(item.compatibility.status)}
                 </span>
-                <span className="rounded-md bg-muted px-2 py-1">{item.tools.length} 个工具</span>
+                <span className="rounded-lg border border-border/75 bg-muted/55 px-2 py-0.5 font-medium text-secondary-foreground">{item.tools.length} 个工具</span>
               </div>
             </button>
           ))}
         </div>
       ) : (
-        <div className="grid min-h-56 place-items-center rounded-xl border border-dashed bg-card text-center">
+        <div className="grid min-h-56 place-items-center rounded-2xl border border-dashed bg-card text-center">
           <div>
             <Sparkles aria-hidden="true" className="mx-auto size-7 text-muted-foreground" />
             <p className="mt-3 text-sm text-muted-foreground">没有匹配的 Skill。</p>
@@ -237,7 +244,7 @@ export function SkillsPanel({ items, importing, onImport, onSelect }: SkillsPane
               <Button
                 aria-current={number === safePage ? "page" : undefined}
                 aria-label={`第 ${number} 页`}
-                className="min-w-9 px-0"
+                className="min-w-8.5 px-0"
                 key={number}
                 onClick={() => setPage(number)}
                 size="sm"
@@ -271,7 +278,8 @@ function SkillStatusBadge({ callable, enabled }: { callable: boolean; enabled: b
       ? "border-warning/25 bg-warning/10 text-warning"
       : "border-border bg-muted text-muted-foreground";
   return (
-    <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${className}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${className}`}>
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {label}
     </span>
   );

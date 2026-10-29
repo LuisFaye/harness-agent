@@ -71,12 +71,13 @@ export async function uploadSessionAttachment(
   userId: string,
   sessionId: string,
   file: File,
+  signal?: AbortSignal,
 ) {
   const form = new FormData();
   form.append("file", file);
   form.append("user_id", userId);
   form.append("session_id", sessionId);
-  const response = await fetch(apiUrl("/attachments"), { method: "POST", body: form });
+  const response = await fetch(apiUrl("/attachments"), { method: "POST", body: form, ...(signal ? { signal } : {}) });
   if (!response.ok) {
     throw await responseToApiError(response);
   }

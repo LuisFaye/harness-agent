@@ -103,6 +103,12 @@ class ScheduleReportRequest(BaseModel):
     timezone: str = "Asia/Shanghai"
     user_id: str = DEFAULT_USER_ID
 
+class ModelListDraftRequest(BaseModel):
+    """用表单草稿获取模型列表；留空字段沿用已保存配置。"""
+    provider: Literal["openai_compatible", "dashscope"] | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+
 class ModelConfigWriteRequest(BaseModel):
     """更新模型配置的请求体。"""
     provider: Literal["openai_compatible", "dashscope"] = Field(
@@ -1054,6 +1060,16 @@ def create_app(
     @app.get("/settings/model/available", summary="获取当前 Provider 可用模型列表")
     def list_available_models(_: AuthenticatedUser = Depends(require_owner)):
         return model_config_service.list_available_models()
+    @app.post("/settings/model/available", summary="使用表单草稿（未保存）的连接获取可用模型列表")
+    def list_available_models_with_draft(
+            request: ModelListDraftRequest,
+            _: AuthenticatedUser = Depends(require_owner),
+    ):
+        return model_config_service.list_available_models(
+            provider=request.provider,
+            base_url=request.base_url,
+            api_key=request.api_key,
+        )
     # 报日本身既支持“立即生成”，也支持“保存成定时任务后由 worker 执行”。
     @app.post("/report/generate")
     def generate_report(request: ReportGenerateRequest, user: AuthenticatedUser = Depends(require_owner)):

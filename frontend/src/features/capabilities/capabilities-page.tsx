@@ -228,7 +228,7 @@ export function CapabilitiesPage() {
 
       <div
         aria-label="能力类型"
-        className="mt-6 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border bg-muted/60 p-1"
+        className="mt-6 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-border/85 bg-muted/65 p-1 shadow-2xs"
         role="tablist"
       >
         {([
@@ -240,9 +240,9 @@ export function CapabilitiesPage() {
           <button
             aria-controls={`capability-panel-${value}`}
             aria-selected={tab === value}
-            className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`min-h-9.5 shrink-0 rounded-xl px-4 text-sm font-medium whitespace-nowrap transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
               tab === value
-                ? "bg-card font-semibold text-primary shadow-sm"
+                ? "bg-card font-semibold text-primary shadow-xs"
                 : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
             }`}
             id={`capability-tab-${value}`}
@@ -310,7 +310,7 @@ export function CapabilitiesPage() {
         {tab === "mcp" ? (
           <QueryPanel error={mcpQuery.error?.message} loading={mcpQuery.isLoading}>
             <McpPanel
-              busyKey={mcpBusyKey(mcpMutation.variables)}
+              busyKey={mcpMutation.isPending ? mcpBusyKey(mcpMutation.variables) : null}
               items={servers}
               onAction={(server, action) => {
                 setNotice(null);
@@ -354,16 +354,16 @@ export function CapabilitiesPage() {
 
 function Summary({ icon, label, value }: { icon: React.ReactElement; label: string; value: string }) {
   return (
-    <article className="flex items-center gap-3 rounded-xl border border-border/80 bg-card p-4">
+    <article className="flex items-center gap-3.5 rounded-2xl border border-border/85 bg-card p-4 shadow-2xs transition-all duration-150 hover:border-primary/25 hover:shadow-xs">
       <span
         aria-hidden="true"
-        className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary-soft text-accent-foreground shadow-sm shadow-primary/10 [&>svg]:size-5"
+        className="grid size-11 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary-soft text-primary shadow-2xs [&>svg]:size-5"
       >
         {icon}
       </span>
       <div className="min-w-0">
-        <strong className="block text-2xl leading-7 font-semibold tracking-tight tabular-nums">{value}</strong>
-        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{label}</span>
+        <strong className="block text-2xl leading-7 font-semibold tracking-tight text-foreground tabular-nums">{value}</strong>
+        <span className="mt-0.5 block truncate text-xs font-medium text-muted-foreground">{label}</span>
       </div>
     </article>
   );
@@ -371,10 +371,10 @@ function Summary({ icon, label, value }: { icon: React.ReactElement; label: stri
 
 function QueryPanel({ children, error, loading }: { children: React.ReactNode; error: string | undefined; loading: boolean }) {
   if (loading) {
-    return <div className="grid min-h-64 place-items-center rounded-xl border bg-card text-sm text-muted-foreground" role="status">正在读取能力状态</div>;
+    return <div className="grid min-h-64 place-items-center rounded-2xl border bg-card text-sm text-muted-foreground shadow-2xs" role="status">正在读取能力状态</div>;
   }
   if (error) {
-    return <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-5 text-sm text-destructive" role="alert">{error}</div>;
+    return <div className="rounded-2xl border border-destructive/25 bg-destructive/5 p-5 text-sm text-destructive" role="alert">{error}</div>;
   }
   return children;
 }

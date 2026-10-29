@@ -57,6 +57,20 @@ describe("Agent 核心聊天组件", () => {
     expect(container.innerHTML).not.toContain("onerror");
   });
 
+  it("单个波浪号范围不误判为删除线，双波浪号仍渲染删除线", () => {
+    const { container } = render(
+      <MessageResponse>
+        {"| 区域 | 10/29 | 10/30 |\n|---|---|---|\n| 甘孜 | 大部晴 3.5~17.8°C | 阴 4.2~19.9°C |\n\n~~已作废行程~~"}
+      </MessageResponse>,
+    );
+
+    const dels = container.querySelectorAll("del");
+    expect(dels).toHaveLength(1);
+    expect(dels[0]?.textContent).toBe("已作废行程");
+    expect(container.textContent).toContain("3.5~17.8°C");
+    expect(container.textContent).toContain("4.2~19.9°C");
+  });
+
   it("流式 Markdown 可以渐进渲染未闭合的强调和代码块", () => {
     const { container } = render(
       <>
@@ -162,7 +176,7 @@ describe("Agent 核心聊天组件", () => {
     expect(screen.getByText(/不会进入模型、聊天记录或事件流/)).toBeInTheDocument();
   });
 
-  it("流程默认紧凑展示，展开后显示具体输入和结果", () => {
+  it("流程默认单行紧凑展示，展开后只呈现自然语言足迹而不暴露工具 JSON 细节", () => {
     const items: TraceItem[] = [
       {
         key: "iteration-1-started",
@@ -190,24 +204,17 @@ describe("Agent 核心聊天组件", () => {
 
     render(<ExecutionTimeline active={false} items={items} />);
 
-    expect(screen.getByRole("button", { name: /思考过程/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    const trigger = screen.getByRole("button", { name: /思考过程/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(screen.getByRole("button", { name: /思考过程/ }));
-    expect(screen.getByText("决定调用天气工具")).toBeInTheDocument();
-    expect(screen.getByText("weather_query")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /weather_query/ }));
-
-    expect(screen.getByText("city")).toBeInTheDocument();
-    expect(screen.getByText("成都")).toBeInTheDocument();
-    expect(screen.getByText("成都当前 28°C")).toBeInTheDocument();
-    expect(screen.getByText("(320ms)")).toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(screen.getByText("查询天气")).toBeInTheDocument();
+    expect(screen.queryByText("weather_query")).not.toBeInTheDocument();
+    expect(screen.queryByText("(320ms)")).not.toBeInTheDocument();
+    expect(screen.queryByText("决定调用天气工具")).not.toBeInTheDocument();
   });
 
-  it("运行中默认展开思考内容，结束后自动折叠成摘要", () => {
+  it("运行中保持单行实时流转并预览最新思考片段，结束后定格为简短摘要", () => {
     const running: TraceItem = {
       key: "reasoning-1",
       stage: "reasoning",
@@ -218,8 +225,10 @@ describe("Agent 核心聊天组件", () => {
     };
     const { rerender } = render(<ExecutionTimeline active items={[running]} />);
 
+    const trigger = screen.getByRole("button", { name: /思考过程/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByText("正在思考")).toBeVisible();
-    expect(screen.getByText("正在检查可用能力")).toBeVisible();
+    expect(screen.getByText(/正在检查可用能力/)).toBeInTheDocument();
     expect(document.querySelector(".shimmer-text")).toBeInTheDocument();
 
     rerender(<ExecutionTimeline active={false} items={[{ ...running, status: "success" }]} />);
@@ -229,7 +238,7 @@ describe("Agent 核心聊天组件", () => {
     );
   });
 
-  it("思考没有公开摘要时展示安全占位", () => {
+  it("思考没有公开摘要时展开后直接展示安全占位（无二级折叠）", () => {
     render(<ExecutionTimeline active={false} items={[{
       key: "reasoning-empty",
       stage: "reasoning",
@@ -240,11 +249,10 @@ describe("Agent 核心聊天组件", () => {
     }]} />);
 
     fireEvent.click(screen.getByRole("button", { name: /思考过程/ }));
-    fireEvent.click(screen.getByRole("button", { name: /已完成思考/ }));
     expect(screen.getByText("暂无可公开的分析摘要。")).toBeInTheDocument();
   });
 
-  it("运行结束后即使最后一条思考事件仍是 running 也停止扫光动效", () => {
+  it("运行结束后即使最后一条思考事件仍是 running 也停止扫光动效并支持一层展开", () => {
     const staleRunning: TraceItem = {
       key: "reasoning-stale-running",
       stage: "reasoning",
@@ -264,7 +272,6 @@ describe("Agent 核心聊天组件", () => {
     expect(executionTrigger).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(executionTrigger);
-    fireEvent.click(screen.getByRole("button", { name: /已完成思考/ }));
     expect(screen.getByText("正在检查结果")).toBeVisible();
     expect(document.querySelector(".shimmer-text")).toBeNull();
   });
@@ -383,8 +390,8 @@ describe("Agent 核心聊天组件", () => {
     expect(screen.queryByText("Tool 4/8")).not.toBeInTheDocument();
   });
 
-  it("失败工具默认展开并分开显示结构化输入、错误和结果", () => {
-    render(<ExecutionTimeline active items={[{
+  it("失败工具展开后只显示精简错误原因而不暴露底层路径与入参", () => {
+    render(<ExecutionTimeline active={false} defaultOpen items={[{
       key: "mcp-error",
       stage: "mcp_tool_finished",
       status: "error",
@@ -400,10 +407,98 @@ describe("Agent 核心聊天组件", () => {
       },
     }]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /filesystem.read/ }));
-    expect(screen.getByText("path")).toBeVisible();
-    expect(screen.getByText("/allowed/report.md")).toBeVisible();
-    expect(screen.getByText("权限不足")).toBeVisible();
-    expect(screen.getByText("未读取文件")).toBeVisible();
+    expect(screen.getByText("读取文件 执行失败")).toBeVisible();
+    expect(screen.getByText(/权限不足/)).toBeVisible();
+    expect(screen.queryByText("/allowed/report.md")).not.toBeInTheDocument();
+    expect(screen.queryByText("filesystem.read")).not.toBeInTheDocument();
+  });
+
+  it("同一轮对话多次重试只保留最新回复并在再次重试时原地覆盖", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const baseMessages = [
+      {
+        id: 1,
+        session_id: "session-retry",
+        role: "user" as const,
+        content: "川西近期出行适宜性",
+        created_at: "2026-10-29T14:58:00+08:00",
+        run_id: "ask-1",
+      },
+      {
+        id: 2,
+        session_id: "session-retry",
+        role: "assistant" as const,
+        content: "Model not exist.",
+        created_at: "2026-10-29T14:59:00+08:00",
+        run_id: "ask-1",
+      },
+      {
+        id: 3,
+        session_id: "session-retry",
+        role: "assistant" as const,
+        content: "Unknown model error",
+        created_at: "2026-10-29T15:00:00+08:00",
+        run_id: "ask-2",
+      },
+      {
+        id: 4,
+        session_id: "session-retry",
+        role: "assistant" as const,
+        content: "10月底川西彩林正盛，适宜出行。",
+        created_at: "2026-10-29T15:05:00+08:00",
+        run_id: "ask-3",
+      },
+    ];
+
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <MessageScroller
+          error={null}
+          errorMessage={null}
+          isRunning={false}
+          loading={false}
+          messages={baseMessages}
+          onCancelConfirmation={vi.fn()}
+          onConfirm={vi.fn()}
+          onDismissError={vi.fn()}
+          onRetry={vi.fn()}
+          projection={null}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("10月底川西彩林正盛，适宜出行。")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Model not exist.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Unknown model error")).not.toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <MessageScroller
+          error={null}
+          errorMessage={null}
+          isRunning
+          loading={false}
+          messages={baseMessages}
+          onCancelConfirmation={vi.fn()}
+          onConfirm={vi.fn()}
+          onDismissError={vi.fn()}
+          onRetry={vi.fn()}
+          projection={{
+            ...createRunProjection({ runId: "ask-4" }),
+            status: "responding",
+            streamedText: "正在重新生成最新川西攻略…",
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("正在重新生成最新川西攻略…")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("10月底川西彩林正盛，适宜出行。")).not.toBeInTheDocument();
   });
 });

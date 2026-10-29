@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { historicalRunProjection } from "@/features/runs/run-format";
 import { useAuth } from "@/features/auth/auth-provider";
 import {
-  cancelRun,
   getRun,
   getSession,
   listRunActivity,
@@ -12,7 +11,6 @@ import {
   listSessionAttachments,
   listSessionRuns,
   listSessions,
-  uploadSessionAttachment,
 } from "@/lib/api/agent";
 import {
   saveDatabaseConnection,
@@ -20,10 +18,7 @@ import {
 } from "@/lib/api/management";
 import type {
   AskRequest,
-  Attachment,
   ConversationMessage,
-  RunUsage,
-  RunSummary,
   SessionSummary,
 } from "@/lib/api/schemas";
 import {
@@ -36,29 +31,25 @@ import {
   streamAgentRun,
 } from "@/lib/stream/client";
 
-import {
-  createAttachmentPreviewUrl,
-  releaseAttachmentPreviewUrl,
-} from "./attachment-preview";
+import { useSessionAttachments, type PendingAttachment } from "./use-session-attachments";
+import { useRunStop } from "./use-run-stop";
+import { useSessionRunConnections } from "./use-session-run-connections";
+export type { PendingAttachment } from "./use-session-attachments";
 import { sessionDateRange, type SessionTimeFilter } from "./session-time-filter";
 
-const ACTIVE_RUN_STORAGE_PREFIX = "sb-agent-active-run:v2:";
-const COMPLETED_SESSIONS_STORAGE_PREFIX = "sb-agent-completed-sessions:v2:";
+import {
+  activeRunStorageKey, bindOptimisticUserRunId, isActiveRunStatus,
+  isSessionWithinDateRange, matchesSessionKeyword, normalizeRunUsage,
+  OPTIMISTIC_TITLE_FALLBACK, readCompletedSessionIds, redactVisibleDatabaseSecret,
+  summarizeOptimisticSessionTitle, synthesizeActiveSession, writeCompletedSessionIds,
+} from "./workspace-session-state";
 let optimisticMessageId = -1;
-
-export interface PendingAttachment {
-  localId: string;
-  file: File;
-  previewUrl: string;
-  attachment?: Attachment;
-  uploading: boolean;
-  error?: string;
-}
 
 export interface QueuedMessage {
   id: string;
   query: string;
   attachments: PendingAttachment[];
+  editing?: boolean;
 }
 
 interface SendOptions {
@@ -66,6 +57,7 @@ interface SendOptions {
   suppressUserMessage?: boolean;
   attachmentIdsOverride?: string[];
   pendingAttachmentsOverride?: PendingAttachment[];
+  requestOverride?: AskRequest;
 }
 
 interface LocalSessionEntry {
@@ -79,10 +71,14 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user!.id;
+  const connections = useSessionRunConnections(userId);
   const [projection, setProjection] = useState<RunProjection | null>(null);
   const [optimisticMessages, setOptimisticMessages] = useState<ConversationMessage[]>([]);
   const [optimisticTitle, setOptimisticTitle] = useState<string | null>(null);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const {
+    pendingAttachments, setPendingAttachments, uploadFiles, retryAttachment,
+    cancelAttachmentUpload, removePendingAttachment, isUploading, uploadNotice,
+  } = useSessionAttachments(userId, sessionId);
   const [queuedMessages, setQueuedMessages] = useState<Map<string, QueuedMessage>>(new Map());
   const [timeFilter, setTimeFilter] = useState<SessionTimeFilter>("all");
   const [isRunning, setIsRunning] = useState(false);
@@ -95,13 +91,14 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     sessionId: string;
     title: string;
   } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dismissedErrorRunId, setDismissedErrorRunId] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const pendingProjectionRef = useRef<RunProjection | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const lastQueryRef = useRef("");
+  const lastRequestsRef = useRef(new Map<string, AskRequest>());
+  const currentSessionRef = useRef(sessionId);
+  const { isStopping, stopRun, observeStop, resetStop } = useRunStop(userId, sessionId, setErrorMessage);
   const resumeAttemptedRef = useRef("");
   const previousActiveRunStatusesRef = useRef<Map<string, string>>(new Map());
   const baselineEstablishedRef = useRef(false);
@@ -175,7 +172,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
   });
 
   const publishProjection = useCallback((next: RunProjection) => {
-    pendingProjectionRef.current = next;
+    connections.publish(sessionId, next);
     const runId = next.runId;
     if (runId) {
       window.localStorage.setItem(activeRunStorageKey(userId, sessionId), runId);
@@ -183,6 +180,9 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       // 避免回复结束时用户气泡卸载重挂、滚动区跟着跳回顶部。
       setOptimisticMessages((current) => bindOptimisticUserRunId(current, sessionId, runId));
     }
+    observeStop(next);
+    if (currentSessionRef.current !== sessionId) return;
+    pendingProjectionRef.current = next;
     if (isTerminalProjection(next)) {
       if (animationFrameRef.current !== null) {
         window.cancelAnimationFrame(animationFrameRef.current);
@@ -202,7 +202,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
         }
       });
     }
-  }, [sessionId, userId]);
+  }, [connections, observeStop, sessionId, userId]);
 
   const upsertLocalActiveSession = useCallback((entry: SessionSummary) => {
     setLocalActiveSessions((current) => {
@@ -230,46 +230,43 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
 
   const refreshConversation = useCallback(async () => {
     const [detailResult] = await Promise.all([
-      detailQuery.refetch(),
-      artifactsQuery.refetch(),
+      queryClient.fetchQuery({ queryKey: ["session", userId, sessionId], queryFn: () => getSession(userId, sessionId), staleTime: 0 }),
+      queryClient.invalidateQueries({ queryKey: ["artifacts", userId, sessionId] }),
       queryClient.invalidateQueries({ queryKey: ["sessions", userId] }),
       queryClient.invalidateQueries({
         queryKey: ["session-latest-run", userId, sessionId],
       }),
     ]);
-    if (detailResult.data) {
-      const hasPersistedUserMessage = detailResult.data.messages.some(
+    if (detailResult) {
+      const hasPersistedUserMessage = detailResult.messages.some(
         (message) => message.role === "user",
       );
-      if (hasPersistedUserMessage) {
+      if (hasPersistedUserMessage && currentSessionRef.current === sessionId) {
         setOptimisticTitle(null);
       }
       setOptimisticMessages((current) => current.filter(
-        (optimistic) => !detailResult.data.messages.some(
+        (optimistic) => optimistic.session_id !== sessionId || !detailResult.messages.some(
           (persisted) => persisted.role === optimistic.role
             && persisted.content === optimistic.content,
         ),
       ));
     }
-  }, [artifactsQuery, detailQuery, queryClient, sessionId, userId]);
-
-  const clearPendingAttachments = useCallback((items: PendingAttachment[]) => {
-    items.forEach((item) => releaseAttachmentPreviewUrl(item.previewUrl));
-  }, []);
+  }, [queryClient, sessionId, userId]);
 
   const executeQuery = useCallback(async (
     query: string,
     options: SendOptions = {},
   ) => {
-    const requestAttachments = options.pendingAttachmentsOverride ?? pendingAttachments;
-    const attachmentIds = options.attachmentIdsOverride ?? requestAttachments
+    const requestAttachments = options.pendingAttachmentsOverride
+      ?? (options.requestOverride || options.appendUserMessage === false ? [] : pendingAttachments);
+    const attachmentIds = options.requestOverride?.attachment_ids ?? options.attachmentIdsOverride ?? requestAttachments
       .filter((item) => item.attachment?.id && !item.error)
       .map((item) => item.attachment!.id);
     const normalizedQuery = query.trim() || (attachmentIds.length ? "请结合附件内容回答。" : "");
-    if ((!normalizedQuery && !attachmentIds.length) || isRunning) {
+    if ((!normalizedQuery && !attachmentIds.length) || isRunning || abortControllerRef.current) {
       return;
     }
-    if (requestAttachments.some((item) => item.uploading)) {
+    if (requestAttachments.some((item) => item.uploading || item.error)) {
       return;
     }
     const requestSessionId = sessionId;
@@ -282,7 +279,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       ...(sessionDetail?.messages ?? []),
       ...optimisticMessages.filter((message) => message.session_id === sessionId),
     ];
-    const request: AskRequest = {
+    const request: AskRequest = options.requestOverride ?? {
       query: normalizedQuery,
       user_id: userId,
       session_id: sessionId,
@@ -324,18 +321,14 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     if (appendUserMessage && !hasExistingMessages && optimisticTitle === null) {
       setOptimisticTitle(summarizeOptimisticSessionTitle(normalizedQuery));
     }
-    lastQueryRef.current = normalizedQuery;
+    lastRequestsRef.current.set(sessionId, request);
+    resetStop();
     setErrorMessage(null);
     setDismissedErrorRunId(null);
     setProjection(createRunProjection());
     // 消息一旦发出就清空待发附件，避免等待回复期间缩略图仍占着输入框。
-    if (options.pendingAttachmentsOverride) {
-      clearPendingAttachments(options.pendingAttachmentsOverride);
-    } else {
-      setPendingAttachments((current) => {
-        clearPendingAttachments(current);
-        return [];
-      });
+    if (appendUserMessage && !options.pendingAttachmentsOverride && !options.requestOverride) {
+      setPendingAttachments([]);
     }
     setIsRunning(true);
     upsertLocalActiveSession({
@@ -349,11 +342,15 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    connections.start(sessionId, controller);
     try {
       const finalProjection = await streamAgentRun(request, {
         signal: controller.signal,
-        onProjection: publishProjection,
+        onProjection: (next) => {
+          if (connections.owns(sessionId, controller)) publishProjection(next);
+        },
       });
+      if (!connections.owns(sessionId, controller)) return;
       publishProjection(finalProjection);
       // 终态先留在本地消息里：后台同步期间继续提问也不会丢失上一条回答和上下文。
       if (finalProjection.streamedText) {
@@ -366,7 +363,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
           run_id: finalProjection.runId,
         }]);
       }
-      if (finalProjection.error) {
+      if (finalProjection.error && currentSessionRef.current === sessionId) {
         setErrorMessage(finalProjection.error.message);
       }
       window.localStorage.removeItem(activeRunStorageKey(userId, requestSessionId));
@@ -375,23 +372,27 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
         // 回复已完成，后台同步失败不应把成功回答改成失败或锁住输入框。
       });
     } catch (error) {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
+      if (abortControllerRef.current === controller && !(error instanceof DOMException && error.name === "AbortError")) {
         setErrorMessage(error instanceof Error ? error.message : "Agent 请求失败。");
+        resetStop();
       }
     } finally {
+      connections.finish(sessionId, controller);
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
         setIsRunning(false);
       }
     }
   }, [
+    connections,
     isRunning,
     optimisticMessages,
     optimisticTitle,
     publishProjection,
     settleLocalSession,
     refreshConversation,
-    clearPendingAttachments,
+    resetStop,
+    setPendingAttachments,
     pendingAttachments,
     sessionDetail?.messages,
     sessionId,
@@ -404,7 +405,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       await executeQuery(query);
       return;
     }
-    if (queuedMessage || pendingAttachments.some((item) => item.uploading)) {
+    if (queuedMessage || pendingAttachments.some((item) => item.uploading || item.error)) {
       return;
     }
     const nextQueuedMessage: QueuedMessage = {
@@ -418,41 +419,44 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       return next;
     });
     setPendingAttachments([]);
-  }, [executeQuery, isRunning, pendingAttachments, queuedMessage, sessionId]);
+  }, [executeQuery, isRunning, pendingAttachments, queuedMessage, sessionId, setPendingAttachments]);
 
-  const editQueuedMessage = useCallback(() => {
-    if (!queuedMessage) {
-      return;
-    }
+  const editQueuedMessage = useCallback((query: string) => {
     setQueuedMessages((current) => {
+      const queued = current.get(sessionId);
+      if (!queued || (!query.trim() && !queued.attachments.length)) return current;
       const next = new Map(current);
-      next.delete(sessionId);
+      next.set(sessionId, { ...queued, query: query.trim(), editing: false });
       return next;
     });
-    setPendingAttachments((current) => {
-      clearPendingAttachments(current);
-      return queuedMessage.attachments;
+  }, [sessionId]);
+
+  const setQueuedEditing = useCallback((editing: boolean) => {
+    setQueuedMessages((current) => {
+      const queued = current.get(sessionId);
+      if (!queued) return current;
+      const next = new Map(current);
+      next.set(sessionId, { ...queued, editing });
+      return next;
     });
-  }, [clearPendingAttachments, queuedMessage, sessionId]);
+  }, [sessionId]);
 
   const cancelQueuedMessage = useCallback(() => {
-    if (!queuedMessage) {
-      return;
-    }
-    clearPendingAttachments(queuedMessage.attachments);
     setQueuedMessages((current) => {
       const next = new Map(current);
       next.delete(sessionId);
       return next;
     });
-  }, [clearPendingAttachments, queuedMessage, sessionId]);
+  }, [sessionId]);
 
   useEffect(() => {
     if (
       isRunning
       || !queuedMessage
+      || queuedMessage.editing
       || queuedDispatchRef.current === queuedMessage.id
       || !projection
+      || connections.projection(sessionId)?.runId !== projection.runId
       || !["completed", "failed", "cancelled"].includes(projection.status)
     ) {
       return;
@@ -466,24 +470,24 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     void executeQuery(queuedMessage.query, {
       pendingAttachmentsOverride: queuedMessage.attachments,
     });
-  }, [executeQuery, isRunning, projection, queuedMessage, sessionId]);
+  }, [connections, executeQuery, isRunning, projection, queuedMessage, sessionId]);
 
   // 切换会话时必须在绘制前清空本地状态，否则新建对话会短暂带上上一会话的乐观消息。
   useLayoutEffect(() => {
-    setProjection(null);
-    setOptimisticMessages([]);
+    currentSessionRef.current = sessionId;
+    if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = null;
+    pendingProjectionRef.current = null;
+    setProjection(connections.projection(sessionId));
     setOptimisticTitle(null);
-    setPendingAttachments((current) => {
-      clearPendingAttachments(current);
-      return [];
-    });
     setErrorMessage(null);
     setDismissedErrorRunId(null);
     resumeAttemptedRef.current = "";
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setIsRunning(false);
-  }, [clearPendingAttachments, sessionId, userId]);
+    abortControllerRef.current = connections.controller(sessionId);
+    setIsRunning(Boolean(abortControllerRef.current));
+    const cached = connections.projection(sessionId);
+    if (cached) observeStop(cached);
+  }, [connections, observeStop, sessionId, userId]);
 
   // 用户进入/选择某会话即视为已查看：立即清除该会话的未读完成圆点并持久化。
   useEffect(() => {
@@ -511,7 +515,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
   }, []);
 
   useEffect(() => {
-    if (!sessionId || isRunning || latestRunQuery.isLoading) {
+    if (!sessionId || isRunning || connections.controller(sessionId) || latestRunQuery.isFetching) {
       return;
     }
     const storedRunId = window.localStorage.getItem(activeRunStorageKey(userId, sessionId));
@@ -545,12 +549,17 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       });
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    const initial = connections.projection(sessionId);
+    connections.start(sessionId, controller);
     void recoverAgentRun(
       userId,
       runId,
-      createRunProjection({ runId }),
-      { signal: controller.signal, onProjection: publishProjection },
+      initial?.runId === runId ? initial : createRunProjection({ runId }),
+      { signal: controller.signal, onProjection: (next) => {
+        if (connections.owns(sessionId, controller)) publishProjection(next);
+      } },
     ).then(async (finalProjection) => {
+      if (!connections.owns(sessionId, controller)) return;
       publishProjection(finalProjection);
       window.localStorage.removeItem(activeRunStorageKey(userId, sessionId));
       settleLocalSession(sessionId);
@@ -558,19 +567,23 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
         // 回复已完成，后台同步失败不应把成功回答改成失败或锁住输入框。
       });
     }).catch((error: unknown) => {
-      if (!(error instanceof DOMException && error.name === "AbortError")) {
+      if (abortControllerRef.current === controller && !(error instanceof DOMException && error.name === "AbortError")) {
         setErrorMessage(error instanceof Error ? error.message : "运行恢复失败。");
+        resetStop();
       }
     }).finally(() => {
+      connections.finish(sessionId, controller);
       if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
         setIsRunning(false);
       }
     });
   }, [
+    connections,
     isRunning,
     latestRunQuery.data?.items,
-    latestRunQuery.isLoading,
+    latestRunQuery.isFetching,
+    resetStop,
     publishProjection,
     settleLocalSession,
     refreshConversation,
@@ -584,6 +597,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     if (
       !sessionId
       || isRunning
+      || connections.controller(sessionId)
       || latestRunQuery.isFetching
       || latestRunDetailQuery.isLoading
       || !runDetail
@@ -605,6 +619,7 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       return historical;
     });
   }, [
+    connections,
     isRunning,
     latestRunQuery.isFetching,
     latestRunDetailQuery.data,
@@ -612,61 +627,6 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     sessionId,
     userId,
   ]);
-
-  const uploadFiles = useCallback(async (files: File[]) => {
-    if (!files.length) {
-      return;
-    }
-    const availableSlots = Math.max(0, 10 - pendingAttachments.length);
-    const candidateFiles = files.slice(0, availableSlots);
-    if (!candidateFiles.length) {
-      setErrorMessage("单条消息最多附带 10 个附件。");
-      return;
-    }
-    setErrorMessage(null);
-    setIsUploading(true);
-    let staged: PendingAttachment[] = [];
-    try {
-      staged = await Promise.all(candidateFiles.map(async (file) => ({
-        localId: crypto.randomUUID(),
-        file,
-        previewUrl: await createAttachmentPreviewUrl(file),
-        uploading: true,
-      })));
-      setPendingAttachments((current) => [...current, ...staged]);
-      for (const item of staged) {
-        try {
-          const attachment = await uploadSessionAttachment(userId, sessionId, item.file);
-          setPendingAttachments((current) => current.map((entry) => (
-            entry.localId === item.localId
-              ? { ...entry, attachment, uploading: false }
-              : entry
-          )));
-          void attachmentsQuery.refetch();
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "附件上传失败。";
-          setPendingAttachments((current) => current.map((entry) => (
-            entry.localId === item.localId
-              ? { ...entry, uploading: false, error: message }
-              : entry
-          )));
-          setErrorMessage(message);
-        }
-      }
-    } finally {
-      setIsUploading(false);
-    }
-  }, [attachmentsQuery, pendingAttachments.length, sessionId, userId]);
-
-  const removePendingAttachment = useCallback((localId: string) => {
-    setPendingAttachments((current) => {
-      const target = current.find((item) => item.localId === localId);
-      if (target) {
-        releaseAttachmentPreviewUrl(target.previewUrl);
-      }
-      return current.filter((item) => item.localId !== localId);
-    });
-  }, []);
 
   const connectDatabase = useCallback(async (
     payload: DatabaseConnectionWritePayload,
@@ -687,20 +647,6 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       });
     }
   }, [executeQuery, queryClient]);
-
-  const stopRun = useCallback(async () => {
-    if (!projection?.runId || projection.status === "cancel_requested") {
-      return;
-    }
-    try {
-      await cancelRun(userId, projection.runId);
-      setProjection((current) => current
-        ? { ...current, status: "cancel_requested" }
-        : current);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "停止请求提交失败。");
-    }
-  }, [projection?.runId, projection?.status, userId]);
 
   const markSessionRead = useCallback((targetSessionId: string) => {
     setCompletedSessionIds((current) => {
@@ -730,36 +676,88 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
     setProjection(null);
   }, [projection?.runId, projection?.status]);
 
-  const messages = useMemo(
-    () => [
+  const messages = useMemo(() => {
+    const combined = [
       ...(sessionDetail?.messages ?? []),
       ...optimisticMessages.filter((message) => message.session_id === sessionId
         && !(message.run_id && (sessionDetail?.messages ?? []).some((persisted) => (
           persisted.role === message.role
           && persisted.run_id === message.run_id
         )))),
-    ],
-    [optimisticMessages, sessionDetail?.messages, sessionId],
-  );
-  const lastUserMessage = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
-      if (message && message.role === "user" && message.content.trim()) {
-        return message.content;
+    ];
+    const collapsed: ConversationMessage[] = [];
+    for (const item of combined) {
+      const prev = collapsed.at(-1);
+      if (prev && prev.role === "assistant" && item.role === "assistant") {
+        collapsed[collapsed.length - 1] = item;
+      } else {
+        collapsed.push(item);
       }
     }
-    return "";
-  }, [messages]);
-  const regenerateLastAnswer = useCallback(() => {
-    if (isRunning || !lastUserMessage) {
-      return;
-    }
-    void executeQuery(lastUserMessage, {
-      appendUserMessage: false,
-      suppressUserMessage: true,
-      attachmentIdsOverride: [],
+    return collapsed;
+  }, [optimisticMessages, sessionDetail?.messages, sessionId]);
+  const lastUserMessage = useMemo(() => [...messages].reverse().find(
+    (message) => message.role === "user" && (message.content.trim() || message.attachment_ids?.length),
+  ), [messages]);
+  const repeatLastRequest = useCallback(async (regenerate: boolean) => {
+    if (isRunning || !lastUserMessage) return;
+    const latestRequest = lastRequestsRef.current.get(sessionId);
+    const saved = !regenerate || (latestRequest && redactVisibleDatabaseSecret(latestRequest.query) === lastUserMessage.content)
+      ? latestRequest : undefined;
+    const request: AskRequest = saved ? { ...saved } : {
+      query: lastUserMessage.content || "请结合附件内容回答。",
+      user_id: userId,
+      session_id: sessionId,
+      client_messages: messages.slice(0, messages.indexOf(lastUserMessage))
+        .filter((message) => ["user", "assistant", "system"].includes(message.role))
+        .slice(-12)
+        .map((message) => ({
+          role: message.role as "user" | "assistant" | "system",
+          content: message.content,
+          created_at: message.created_at,
+        })),
+      attachment_ids: lastUserMessage.attachment_ids?.length
+        ? lastUserMessage.attachment_ids
+        : (lastUserMessage.attachments ?? []).map((item) => item.id),
+    };
+    // 重试保持原请求的附件和上下文，不消费输入框中新起草的附件。
+    request.suppress_user_message = regenerate || Boolean(lastUserMessage.run_id)
+      || Boolean(sessionDetail?.messages.some((message) => message.id === lastUserMessage.id));
+    // 原地覆盖本轮旧的 Assistant 回复，避免重试后同一轮堆叠多个回复框。
+    setOptimisticMessages((current) => {
+      const next = [...current];
+      for (let index = next.length - 1; index >= 0; index -= 1) {
+        const item = next[index];
+        if (item?.session_id !== sessionId) continue;
+        if (item.role === "assistant") {
+          next.splice(index, 1);
+        } else {
+          break;
+        }
+      }
+      return next;
     });
-  }, [executeQuery, isRunning, lastUserMessage]);
+    queryClient.setQueryData(
+      ["session", userId, sessionId],
+      (old: typeof sessionDetail) => {
+        if (!old?.messages?.length) return old;
+        let cutIndex = old.messages.length;
+        while (cutIndex > 0 && old.messages[cutIndex - 1]?.role === "assistant") {
+          cutIndex -= 1;
+        }
+        if (cutIndex === old.messages.length) return old;
+        return {
+          ...old,
+          messages: old.messages.slice(0, cutIndex),
+        };
+      },
+    );
+    await executeQuery(request.query, { appendUserMessage: false, requestOverride: request });
+  }, [executeQuery, isRunning, lastUserMessage, messages, queryClient, sessionDetail, sessionId, userId]);
+  const retryLastRequest = useCallback(() => repeatLastRequest(false), [repeatLastRequest]);
+  const regenerateLastAnswer = useCallback(() => {
+    void repeatLastRequest(true);
+  }, [repeatLastRequest]);
   const sessions = useMemo(() => {
     const seen = new Set<string>();
     const serverSessions = (sessionsQuery.data?.pages ?? [])
@@ -1004,235 +1002,30 @@ export function useAgentWorkspace(sessionId: string, sessionKeyword = "") {
       : projection,
     isRunning,
     isUploading,
+    isStopping,
+    uploadNotice,
     errorMessage,
     sendQuery,
     confirmRun: () => executeQuery("确认", { appendUserMessage: false }),
     cancelConfirmation: () => executeQuery("取消", { appendUserMessage: false }),
-    retryLastQuery: () => executeQuery(lastQueryRef.current || lastUserMessage),
+    retryLastQuery: retryLastRequest,
     canRegenerateLastAnswer: Boolean(lastUserMessage),
     regenerateLastAnswer,
     contextObservation,
     latestRunUsage,
     stopRun,
     uploadFiles,
+    retryAttachment,
+    cancelAttachmentUpload,
     completedSessionIds,
     completionNotice,
     markSessionRead,
     dismissCompletionNotice,
     removePendingAttachment,
     editQueuedMessage,
+    setQueuedEditing,
     cancelQueuedMessage,
     clearError: dismissRunError,
     connectDatabase,
   };
-}
-
-function bindOptimisticUserRunId(
-  messages: ConversationMessage[],
-  targetSessionId: string,
-  runId: string,
-): ConversationMessage[] {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message?.session_id !== targetSessionId || message.role !== "user") {
-      continue;
-    }
-    if (message.run_id === runId) {
-      return messages;
-    }
-    if (message.run_id == null) {
-      const next = [...messages];
-      next[index] = { ...message, run_id: runId };
-      return next;
-    }
-    return messages;
-  }
-  return messages;
-}
-
-function redactVisibleDatabaseSecret(value: string): string {
-  return value
-    .replace(
-      /(\b(?:mysql_)?password\s*[:=]\s*)(['"]?)([^\s,;'"&]+)\2/gi,
-      "$1[已移除，请使用安全表单]",
-    )
-    .replace(
-      /((?:jdbc:)?mysql:\/\/[^:\s/@]+:)[^@\s]+(@)/gi,
-      "$1[已移除]$2",
-    );
-}
-
-function normalizeRunUsage(value: unknown): RunUsage | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  const numeric = (key: string): number | null => {
-    const raw = record[key];
-    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-  };
-  return {
-    input_tokens: numeric("input_tokens"),
-    output_tokens: numeric("output_tokens"),
-    total_tokens: numeric("total_tokens"),
-    cache_read_tokens: numeric("cache_read_tokens"),
-    cache_miss_tokens: numeric("cache_miss_tokens"),
-    cache_write_tokens: numeric("cache_write_tokens"),
-    reasoning_tokens: numeric("reasoning_tokens"),
-  };
-}
-
-const OPTIMISTIC_TITLE_MAX_CHARS = 36;
-const OPTIMISTIC_TITLE_FALLBACK = "新对话";
-const MARKDOWN_LEADING_PATTERN = /^(?:#{1,6}\s+|[-*+]\s+|\d{1,3}[.、)]\s+)/;
-const CONVERSATION_PREFIX_PATTERN = /^(?:你好[，,、\s]+|您好[，,、\s]+)?(?:请\s*帮我|请\s*帮忙|请\s*麻烦你|帮我一下|帮帮忙|麻烦你|请你|请问|帮我|帮忙)?/;
-// 与后端 _first_sentence 保持一致：中文句号、感叹号、问号及中英文感叹号、
-// 问号直接作为句末；英文句号仅在后面是空白/换行/字符串结尾时视为句末，
-// 避免数字小数点（如 1.2.3）和域名（如 example.com）中的点被误判为句界。
-const SENTENCE_END_PATTERN = /[。！？!?]|\.(?=\s|$)/;
-const SEMANTIC_TITLE_RULES: ReadonlyArray<readonly [RegExp, string]> = [
-  [/^(?:你|您)?好(?:呀|啊|哇)?$|^(?:hi|hello|hey)$/i, "用户打招呼"],
-  [/^(?:谢谢|多谢|感谢)(?:你|您)?(?:了|啦|啊)?$/i, "用户表示感谢"],
-  [/^(?:再见|拜拜|回头见|bye|goodbye)$/i, "用户结束对话"],
-  [/^(?:你是谁|你叫什么|介绍一下你自己)$/i, "了解助手身份"],
-  [/^(?:你能做什么|你会做什么|你有哪些能力|你有什么功能)$/i, "了解助手能力"],
-];
-
-function summarizeOptimisticSessionTitle(text: string): string {
-  const cleaned = cleanOptimisticTitleText(text);
-  if (!cleaned) {
-    return OPTIMISTIC_TITLE_FALLBACK;
-  }
-  for (const [pattern, title] of SEMANTIC_TITLE_RULES) {
-    if (pattern.test(cleaned.trim())) {
-      return title;
-    }
-  }
-  return cleaned.slice(0, OPTIMISTIC_TITLE_MAX_CHARS);
-}
-
-// 与后端 _clean_title_text 保持一致：去代码围栏、行首 Markdown 标记和常见
-// 请求前缀，再只保留第一句话；供新会话首次发送时立即生成乐观标题。
-function cleanOptimisticTitleText(text: string): string {
-  const lines: string[] = [];
-  let inFence = false;
-  for (const rawLine of text.split(/\r?\n/)) {
-    const stripped = rawLine.trim();
-    if (stripped.startsWith("```") || stripped.startsWith("~~~")) {
-      inFence = !inFence;
-      continue;
-    }
-    if (!inFence) {
-      lines.push(stripped.replace(MARKDOWN_LEADING_PATTERN, ""));
-    }
-  }
-  let cleaned = lines.join("\n");
-  for (let round = 0; round < 3; round += 1) {
-    const next = cleaned.replace(CONVERSATION_PREFIX_PATTERN, "");
-    if (next === cleaned) {
-      break;
-    }
-    cleaned = next;
-  }
-  return firstTitleSentence(cleaned);
-}
-
-// 与后端 _first_sentence 保持一致：取最早出现的句末符号之前的内容作为
-// 第一句话；英文句号仅在后面是空白/换行/字符串结尾时视为句末；当前行没有
-// 句末符号时，换行也视作句界，只取第一行。
-function firstTitleSentence(text: string): string {
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) {
-      continue;
-    }
-    const endIndex = line.search(SENTENCE_END_PATTERN);
-    if (endIndex >= 0) {
-      const firstSentence = line.slice(0, endIndex).trim();
-      if (firstSentence) {
-        return firstSentence.replace(/\s+/g, " ").trim();
-      }
-    } else {
-      return line.replace(/\s+/g, " ").trim();
-    }
-  }
-  return "";
-}
-
-const ACTIVE_RUN_STATUSES = new Set(["queued", "running", "cancel_requested"]);
-
-function readCompletedSessionIds(userId: string): string[] {
-  try {
-    const raw = window.localStorage.getItem(`${COMPLETED_SESSIONS_STORAGE_PREFIX}${userId}`);
-    if (!raw) {
-      return [];
-    }
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    // localStorage 数据损坏时安全回退为空集合。
-    return [];
-  }
-}
-
-function writeCompletedSessionIds(userId: string, sessionIds: string[]) {
-  try {
-    window.localStorage.setItem(
-      `${COMPLETED_SESSIONS_STORAGE_PREFIX}${userId}`,
-      JSON.stringify(sessionIds),
-    );
-  } catch {
-    // localStorage 不可用（例如隐私模式）时静默降级，未读状态仅保留在当前页面。
-  }
-}
-
-function activeRunStorageKey(userId: string, sessionId: string): string {
-  return `${ACTIVE_RUN_STORAGE_PREFIX}${userId}:${sessionId}`;
-}
-
-function isActiveRunStatus(status: string): boolean {
-  return ACTIVE_RUN_STATUSES.has(status);
-}
-
-function synthesizeActiveSession(run: RunSummary): SessionSummary {
-  const title = summarizeOptimisticSessionTitle(run.query_summary);
-  return {
-    session_id: run.session_id,
-    title,
-    preview: run.query_summary,
-    message_count: 1,
-    last_message_at: run.started_at,
-    has_summary: false,
-  };
-}
-
-function matchesSessionKeyword(session: SessionSummary, keyword: string): boolean {
-  if (!keyword) {
-    return true;
-  }
-  const needle = keyword.toLowerCase();
-  return session.session_id.toLowerCase().includes(needle)
-    || session.title.toLowerCase().includes(needle)
-    || session.preview.toLowerCase().includes(needle);
-}
-
-function isSessionWithinDateRange(
-  value: string | null,
-  range: { dateFrom?: string; dateTo?: string },
-): boolean {
-  if (!range.dateFrom && !range.dateTo) {
-    return true;
-  }
-  if (!value) {
-    return false;
-  }
-  if (range.dateFrom && value < range.dateFrom) {
-    return false;
-  }
-  if (range.dateTo && value >= range.dateTo) {
-    return false;
-  }
-  return true;
 }

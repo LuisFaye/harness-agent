@@ -57,6 +57,9 @@ class AgentAnswerStreamParser:
         for candidate in (final_content, self._buffer):
             blocks, mode = complete_answer_blocks(candidate)
             if blocks:
+                if mode == "plain_text" and self._blocks:
+                    # 流式阶段已解析出合法 blocks 时，不能被包含原始 JSON 的普通文本回退覆盖。
+                    continue
                 self.complete = True
                 self._blocks = blocks
                 if mode != "structured":

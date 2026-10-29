@@ -216,8 +216,18 @@ export function testModelConnection() {
   return requestJson("/settings/model/test", modelConnectionResponseSchema, { method: "POST" });
 }
 
-export function listAvailableModels() {
-  return requestJson("/settings/model/available", modelListResponseSchema);
+export interface ModelListDraft {
+  provider?: "openai_compatible" | "dashscope";
+  base_url?: string;
+  api_key?: string;
+}
+
+export function listAvailableModels(draft?: ModelListDraft) {
+  if (!draft) return requestJson("/settings/model/available", modelListResponseSchema);
+  return requestJson("/settings/model/available", modelListResponseSchema, {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
 }
 
 function githubSource(path: string): string | null {

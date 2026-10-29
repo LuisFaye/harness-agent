@@ -693,7 +693,8 @@ class AskService:
                     ),
                     user_input,
                 )
-            title = generate_conversation_title(title_seed, settings=self.settings)
+            # 设置页保存模型后不重启服务也要生效，因此每次重新读取配置而不是用启动时的快照。
+            title = generate_conversation_title(title_seed, settings=load_settings())
             if title:
                 save_title(
                     title,

@@ -106,18 +106,18 @@ export function SchedulesPage() {
 
       <div className="mt-6 flex items-end justify-between gap-4">
         <div>
-          <h2 className="font-semibold">已创建任务</h2>
+          <h2 className="font-semibold tracking-tight">已创建任务</h2>
           <p className="mt-1 text-sm text-muted-foreground">任务按后端返回顺序展示。</p>
         </div>
-        <span className="text-xs font-medium text-muted-foreground">{jobs.length} 个任务</span>
+        <span className="rounded-full bg-muted/70 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">{jobs.length} 个任务</span>
       </div>
 
       {schedulesQuery.isLoading ? (
-        <div className="mt-4 grid min-h-48 place-items-center rounded-xl border bg-card text-sm text-muted-foreground" role="status">
+        <div className="mt-4 grid min-h-48 place-items-center rounded-2xl border border-border/85 bg-card text-sm text-muted-foreground shadow-2xs" role="status">
           正在读取自动任务
         </div>
       ) : schedulesQuery.error ? (
-        <div className="mt-4 rounded-xl border border-destructive/25 bg-destructive/5 p-5 text-sm text-destructive" role="alert">
+        <div className="mt-4 rounded-2xl border border-destructive/25 bg-destructive/5 p-5 text-sm text-destructive" role="alert">
           <div className="flex items-center gap-2 font-semibold"><AlertCircle aria-hidden="true" />任务加载失败</div>
           <p className="mt-2">{schedulesQuery.error.message}</p>
         </div>
@@ -136,10 +136,12 @@ export function SchedulesPage() {
           ))}
         </div>
       ) : (
-        <div className="mt-4 grid min-h-56 place-items-center rounded-xl border border-dashed bg-card px-6 text-center">
+        <div className="mt-4 grid min-h-56 place-items-center rounded-2xl border border-dashed border-border/80 bg-card/50 px-6 text-center">
           <div>
-            <CalendarCheck aria-hidden="true" className="mx-auto size-8 text-muted-foreground" />
-            <h2 className="mt-3 font-semibold">暂无自动任务</h2>
+            <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-muted/60 text-muted-foreground">
+              <CalendarCheck aria-hidden="true" className="size-6" />
+            </span>
+            <h2 className="mt-3 font-semibold tracking-tight">暂无自动任务</h2>
             <p className="mt-1 text-sm text-muted-foreground">创建后的真实调度任务会在这里统一展示。</p>
           </div>
         </div>
@@ -170,16 +172,16 @@ function SummaryCard({
   tone?: "neutral" | "success" | "warning";
 }) {
   const toneClass = tone === "success"
-    ? "bg-success/10 text-success"
+    ? "border-success/15 bg-success/10 text-success"
     : tone === "warning"
-      ? "bg-warning/10 text-warning"
-      : "bg-accent text-accent-foreground";
+      ? "border-warning/15 bg-warning/10 text-warning"
+      : "border-primary/15 bg-primary-soft text-primary";
   return (
-    <article className="flex items-center gap-3 rounded-xl border bg-card p-4">
-      <span aria-hidden="true" className={`grid size-10 place-items-center rounded-lg [&>svg]:size-5 ${toneClass}`}>{icon}</span>
+    <article className="flex items-center gap-3.5 rounded-2xl border border-border/85 bg-card p-4 shadow-2xs transition-all duration-150 hover:border-border hover:shadow-xs">
+      <span aria-hidden="true" className={`grid size-10.5 place-items-center rounded-xl border [&>svg]:size-5 ${toneClass}`}>{icon}</span>
       <div>
-        <strong className="block text-xl tabular-nums">{value}</strong>
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <strong className="block font-mono text-2xl font-semibold tracking-tight tabular-nums">{value}</strong>
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
       </div>
     </article>
   );
